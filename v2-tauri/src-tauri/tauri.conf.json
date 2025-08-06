@@ -64,13 +64,14 @@
       ]
     },
     "security": {
-      "csp": null
+      "csp": null,
+      "devCsp": null
     },
     "windows": [
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Jasper Designer V2.0",
+        "title": "Jasper Designer V2.0 - Debug",
         "width": 1400,
         "height": 900,
         "minWidth": 1200,

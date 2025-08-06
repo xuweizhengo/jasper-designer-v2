@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tauri::{command, State, api::dialog};
+use tauri::{command, State};
 use serde::{Deserialize, Serialize};
 
 use crate::core::state::{AppState, AppStateDto};
