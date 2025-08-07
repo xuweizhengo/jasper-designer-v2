@@ -1,0 +1,62 @@
+name: "Code Quality Check"
+
+# 每次推送和 PR 都进行代码质量检查
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  WORKING_DIR: v2-tauri
+
+jobs:
+  # ===============================================
+  # 代码质量检查
+  # ===============================================
+  quality-check:
+    name: "质量检查"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "📥 检出代码"
+        uses: actions/checkout@v3
+
+      - name: "📦 安装 Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: "🦀 安装 Rust"
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: "📦 安装前端依赖"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: "🔍 TypeScript 类型检查"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npx tsc --noEmit
+
+      - name: "🔍 前端构建检查"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run build
+
+      - name: "🔍 Rust 代码格式检查"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri
+        run: cargo fmt --check
+
+      - name: "🔍 Rust 代码质量检查"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri
+        run: cargo clippy -- -D warnings
+
+      - name: "🧪 Rust 单元测试"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri
+        run: cargo test
+
+      - name: "✅ 所有检查通过"
+        run: echo "🎉 代码质量检查全部通过！"

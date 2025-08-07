@@ -16,6 +16,7 @@ const ComponentLibrary: Component = () => {
       description: '静态文字标签',
       default_size: { width: 100, height: 24 },
       create_content: (data) => ({
+        type: 'Text',
         content: data?.text || '文字内容',
         style: {
           font_family: 'SimSun',
@@ -34,6 +35,7 @@ const ComponentLibrary: Component = () => {
       description: '动态数据字段',
       default_size: { width: 120, height: 24 },
       create_content: (data) => ({
+        type: 'DataField',
         expression: data?.expression || '${fieldName}',
         format: data?.format,
         style: {
@@ -53,6 +55,7 @@ const ComponentLibrary: Component = () => {
       description: '矩形框架',
       default_size: { width: 100, height: 60 },
       create_content: (data) => ({
+        type: 'Rectangle',
         fill_color: data?.fill_color || 'transparent',
         border: {
           color: data?.border_color || '#000000',
@@ -69,6 +72,7 @@ const ComponentLibrary: Component = () => {
       description: '分隔线',
       default_size: { width: 200, height: 2 },
       create_content: (data) => ({
+        type: 'Line',
         color: data?.color || '#000000',
         width: data?.width || 1,
       }),
@@ -81,6 +85,7 @@ const ComponentLibrary: Component = () => {
       description: '图片占位符',
       default_size: { width: 100, height: 80 },
       create_content: (data) => ({
+        type: 'Image',
         src: data?.src || '',
         alt: data?.alt || '图片',
       }),
@@ -96,6 +101,7 @@ const ComponentLibrary: Component = () => {
       description: '银行标题和Logo区域',
       default_size: { width: 300, height: 60 },
       create_content: () => ({
+        type: 'Text',
         content: '中国工商银行电子回单',
         style: {
           font_family: 'SimHei',
@@ -114,6 +120,7 @@ const ComponentLibrary: Component = () => {
       description: '格式化金额显示',
       default_size: { width: 120, height: 24 },
       create_content: () => ({
+        type: 'DataField',
         expression: '${amount}',
         format: 'currency',
         style: {
@@ -133,6 +140,7 @@ const ComponentLibrary: Component = () => {
       description: '客户姓名和账号',
       default_size: { width: 150, height: 24 },
       create_content: () => ({
+        type: 'DataField',
         expression: '${customerName}',
         style: {
           font_family: 'SimSun',

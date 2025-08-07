@@ -18,9 +18,9 @@ const CanvasGrid: Component<CanvasGridProps> = (props) => {
           <path
             d={`M ${props.config.grid_size} 0 L 0 0 0 ${props.config.grid_size}`}
             fill="none"
-            stroke="var(--color-grid)"
-            stroke-width="0.5"
-            opacity="0.5"
+            stroke="#d1d5db"
+            stroke-width="1"
+            opacity="0.8"
           />
         </pattern>
       </defs>

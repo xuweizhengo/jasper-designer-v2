@@ -62,13 +62,11 @@ const Canvas: Component = () => {
     return () => window.removeEventListener('resize', updateCanvasSize);
   });
 
-  // Calculate canvas transform based on zoom and offset
-  const canvasTransform = createMemo(() => {
-    const { zoom, offset_x, offset_y } = state.canvas_config;
-    // This could be used for future transform operations
-    console.log('Canvas transform calculated');
-    return `translate(${offset_x}, ${offset_y}) scale(${zoom})`;
-  });
+  // Canvas transform calculation (reserved for future use)
+  // const canvasTransform = createMemo(() => {
+  //   const { zoom, offset_x, offset_y } = state.canvas_config;
+  //   return `translate(${offset_x}, ${offset_y}) scale(${zoom})`;
+  // });
 
   // Calculate viewBox to show the entire canvas
   const viewBox = createMemo(() => {

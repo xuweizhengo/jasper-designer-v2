@@ -1,0 +1,68 @@
+name: "Simple Build"
+
+# 触发条件：推送到 main 分支或手动触发
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  WORKING_DIR: v2-tauri
+
+jobs:
+  # ===============================================
+  # 快速构建 - 只构建 Windows 版本
+  # ===============================================
+  build-quick:
+    name: "Quick Build (Windows)"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "📥 检出代码"
+        uses: actions/checkout@v3
+
+      - name: "📦 安装 Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: "🦀 安装 Rust"
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: "🔧 安装系统依赖"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: "📦 安装前端依赖"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: "🔨 构建应用"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run tauri build -- --target x86_64-pc-windows-gnu
+
+      - name: "📁 列出构建文件"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-gnu/release
+        run: |
+          echo "=== 构建产物 ==="
+          ls -la *.exe || echo "没有找到 exe 文件"
+          ls -la *.dll || echo "没有找到 dll 文件"
+
+      - name: "🚀 上传构建产物"
+        uses: actions/upload-artifact@v3
+        with:
+          name: jasper-designer-windows
+          path: |
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-gnu/release/*.exe
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-gnu/release/*.dll
+          retention-days: 7
+
+      - name: "✅ 构建完成通知"
+        run: |
+          echo "🎉 构建完成！"
+          echo "📦 构建产物已上传，可在 Actions 页面下载"

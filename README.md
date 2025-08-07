@@ -1,5 +1,9 @@
 # Jasper在线报表设计器
 
+[![Build Status](https://gitee.com/your-username/jasper/workflows/Simple%20Build/badge.svg)](https://gitee.com/your-username/jasper/actions)
+[![Quality Check](https://gitee.com/your-username/jasper/workflows/Code%20Quality%20Check/badge.svg)](https://gitee.com/your-username/jasper/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 基于Figma/墨刀设计理念的JasperReports可视化设计器，专注银行回单业务场景。
 
 ## 📋 项目概述

@@ -17,7 +17,7 @@
         "all": false,
         "execute": false,
         "sidecar": false,
-        "open": false
+        "open": true
       },
       "fs": {
         "all": false,

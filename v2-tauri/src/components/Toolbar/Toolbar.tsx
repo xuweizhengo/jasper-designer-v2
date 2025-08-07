@@ -26,9 +26,9 @@ const Toolbar: Component = () => {
     handleZoomChange(newZoom);
   };
 
-  const resetZoom = () => {
-    handleZoomChange(100);
-  };
+  // const resetZoom = () => {
+  //   handleZoomChange(100);
+  // };
 
   const toggleGrid = async () => {
     try {

@@ -1,7 +1,7 @@
-import { createContext, useContext, ParentComponent, createSignal, createEffect, onMount } from 'solid-js';
+import { createContext, useContext, ParentComponent, createSignal, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { invoke } from '@tauri-apps/api/tauri';
-import type { AppState, ReportElement, CanvasConfig } from '../types';
+import type { AppState, CanvasConfig } from '../types';
 
 // App Context Type
 interface AppContextType {

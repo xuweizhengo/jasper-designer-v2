@@ -1,12 +1,12 @@
 import { Component } from 'solid-js';
-import { useAppContext } from '../../stores/AppContext';
+// import { useAppContext } from '../../stores/AppContext'; // Reserved for future use
 import Toolbar from '../Toolbar/Toolbar';
 import ComponentLibrary from '../Panels/ComponentLibrary';
 import PropertiesPanel from '../Panels/PropertiesPanel';
 import Canvas from '../Canvas/Canvas';
 
 const MainLayout: Component = () => {
-  const { state } = useAppContext();
+  // const { state } = useAppContext(); // Reserved for future state usage
 
   return (
     <div class="h-full flex flex-col bg-secondary">

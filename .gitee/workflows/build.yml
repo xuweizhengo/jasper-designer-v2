@@ -1,0 +1,339 @@
+name: "Build Jasper Designer V2"
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Build target platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - linux
+        - macos
+
+env:
+  WORKING_DIR: v2-tauri
+  NODE_VERSION: '18'
+  RUST_VERSION: 'stable'
+
+jobs:
+  # ===============================================
+  # Windows 构建任务
+  # ===============================================
+  build-windows:
+    name: "Build for Windows"
+    runs-on: windows-latest
+    if: github.event.inputs.target == 'windows' || github.event.inputs.target == 'all' || github.event.inputs.target == ''
+    
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "📦 Setup Node.js ${{ env.NODE_VERSION }}"
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: "🦀 Setup Rust toolchain"
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+
+      - name: "🎯 Install Rust targets"
+        run: rustup target add x86_64-pc-windows-msvc
+
+      - name: "📋 Cache Cargo dependencies"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ${{ env.WORKING_DIR }}/src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles(format('{0}/src-tauri/Cargo.lock', env.WORKING_DIR)) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: "📦 Install Node.js dependencies"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: "🔨 Build Tauri application"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+
+      - name: "📁 List build artifacts"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-msvc/release
+        run: |
+          echo "=== Build Artifacts ==="
+          dir /s *.exe
+          dir /s *.msi 2>nul || echo "No MSI files found"
+          dir /s *.nsis 2>nul || echo "No NSIS files found"
+
+      - name: "🚀 Upload Windows artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: jasper-designer-windows-x64
+          path: |
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-msvc/release/*.exe
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          retention-days: 30
+
+  # ===============================================
+  # Linux 构建任务
+  # ===============================================
+  build-linux:
+    name: "Build for Linux"
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'linux' || github.event.inputs.target == 'all' || github.event.inputs.target == ''
+    
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "🔧 Install system dependencies"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            libssl-dev \
+            libayatana-appindicator3-dev
+
+      - name: "📦 Setup Node.js ${{ env.NODE_VERSION }}"
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: "🦀 Setup Rust toolchain"
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-unknown-linux-gnu
+
+      - name: "📋 Cache Cargo dependencies"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ${{ env.WORKING_DIR }}/src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles(format('{0}/src-tauri/Cargo.lock', env.WORKING_DIR)) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: "📦 Install Node.js dependencies"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: "🔨 Build Tauri application"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run tauri build
+
+      - name: "📁 List build artifacts"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri/target/release
+        run: |
+          echo "=== Build Artifacts ==="
+          find . -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" | head -20
+          ls -la bundle/ 2>/dev/null || echo "No bundle directory found"
+
+      - name: "🚀 Upload Linux artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: jasper-designer-linux-x64
+          path: |
+            ${{ env.WORKING_DIR }}/src-tauri/target/release/bundle/deb/*.deb
+            ${{ env.WORKING_DIR }}/src-tauri/target/release/bundle/appimage/*.AppImage
+            ${{ env.WORKING_DIR }}/src-tauri/target/release/bundle/rpm/*.rpm
+            ${{ env.WORKING_DIR }}/src-tauri/target/release/jasper-designer
+          retention-days: 30
+
+  # ===============================================
+  # macOS 构建任务
+  # ===============================================
+  build-macos:
+    name: "Build for macOS"
+    runs-on: macos-latest
+    if: github.event.inputs.target == 'macos' || github.event.inputs.target == 'all' || github.event.inputs.target == ''
+    
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "📦 Setup Node.js ${{ env.NODE_VERSION }}"
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: "🦀 Setup Rust toolchain"
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: "📋 Cache Cargo dependencies"
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ${{ env.WORKING_DIR }}/src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles(format('{0}/src-tauri/Cargo.lock', env.WORKING_DIR)) }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: "📦 Install Node.js dependencies"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: "🔨 Build Tauri application (Intel)"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run tauri build -- --target x86_64-apple-darwin
+
+      - name: "🔨 Build Tauri application (Apple Silicon)"
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run tauri build -- --target aarch64-apple-darwin
+
+      - name: "📁 List build artifacts"
+        working-directory: ${{ env.WORKING_DIR }}/src-tauri/target
+        run: |
+          echo "=== Intel Build Artifacts ==="
+          find x86_64-apple-darwin/release -name "*.dmg" -o -name "*.app" 2>/dev/null || echo "No Intel artifacts found"
+          echo "=== Apple Silicon Build Artifacts ==="
+          find aarch64-apple-darwin/release -name "*.dmg" -o -name "*.app" 2>/dev/null || echo "No ARM artifacts found"
+
+      - name: "🚀 Upload macOS artifacts"
+        uses: actions/upload-artifact@v3
+        with:
+          name: jasper-designer-macos-universal
+          path: |
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            ${{ env.WORKING_DIR }}/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            ${{ env.WORKING_DIR }}/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
+            ${{ env.WORKING_DIR }}/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+          retention-days: 30
+
+  # ===============================================
+  # 创建 Release（仅在打标签时）
+  # ===============================================
+  create-release:
+    name: "Create Release"
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v3
+
+      - name: "📦 Download all artifacts"
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: "📁 List downloaded artifacts"
+        run: |
+          echo "=== Downloaded Artifacts ==="
+          find artifacts -type f | head -20
+
+      - name: "🚀 Create Release"
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Jasper Designer V2 ${{ github.ref_name }}"
+          body: |
+            ## 🎉 Jasper Designer V2 ${{ github.ref_name }}
+            
+            ### 📦 安装包下载
+            
+            **Windows:**
+            - `*.exe` - 独立可执行文件
+            - `*.msi` - Windows 安装包
+            
+            **Linux:**
+            - `*.deb` - Debian/Ubuntu 安装包
+            - `*.AppImage` - 通用 Linux 应用
+            - `*.rpm` - RedHat/CentOS 安装包
+            
+            **macOS:**
+            - `*.dmg` - macOS 安装包
+            - Intel 和 Apple Silicon 通用支持
+            
+            ### 🔧 系统要求
+            - Windows 10/11 (x64)
+            - Linux (x64) with GTK3
+            - macOS 10.15+ (Intel/Apple Silicon)
+            
+            ### 🐛 问题反馈
+            如遇问题请在 [Issues](../../issues) 中反馈
+            
+            ---
+            
+            **构建信息:**
+            - 构建时间: ${{ steps.date.outputs.date }}
+            - 提交哈希: ${{ github.sha }}
+          files: |
+            artifacts/jasper-designer-windows-x64/*
+            artifacts/jasper-designer-linux-x64/*
+            artifacts/jasper-designer-macos-universal/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "📅 Get current date"
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+
+  # ===============================================
+  # 构建状态通知
+  # ===============================================
+  notify:
+    name: "Build Status Notification"
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: "📊 Collect build results"
+        run: |
+          echo "Windows Build: ${{ needs.build-windows.result }}"
+          echo "Linux Build: ${{ needs.build-linux.result }}"
+          echo "macOS Build: ${{ needs.build-macos.result }}"
+          
+          if [[ "${{ needs.build-windows.result }}" == "success" && "${{ needs.build-linux.result }}" == "success" && "${{ needs.build-macos.result }}" == "success" ]]; then
+            echo "🎉 All builds successful!"
+            echo "build_status=success" >> $GITHUB_ENV
+          else
+            echo "❌ Some builds failed"
+            echo "build_status=failure" >> $GITHUB_ENV
+          fi

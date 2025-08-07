@@ -7,8 +7,7 @@ interface ElementRendererProps {
 }
 
 const ElementRenderer: Component<ElementRendererProps> = (props) => {
-  // Create a unique key for the element to ensure proper reactivity
-  const elementKey = createMemo(() => props.element.id.value);
+  // Element key is handled automatically by Solid.js reactivity
 
   // Common element styles
   const elementStyle = createMemo(() => ({
@@ -28,17 +27,15 @@ const ElementRenderer: Component<ElementRendererProps> = (props) => {
             <text
               x={0}
               y={textContent().style.font_size * 0.8} // Adjust for baseline
-              width={size.width}
-              height={size.height}
               font-family={textContent().style.font_family}
-              font-size={textContent().style.font_size}
+              font-size={`${textContent().style.font_size}`}
               font-weight={textContent().style.font_weight}
               fill={textContent().style.color}
               text-anchor={
                 textContent().style.align === 'Center' ? 'middle' :
                 textContent().style.align === 'Right' ? 'end' : 'start'
               }
-              dominant-baseline="text-before-edge"
+              dominant-baseline="hanging"
             >
               {textContent().content}
             </text>
@@ -128,10 +125,8 @@ const ElementRenderer: Component<ElementRendererProps> = (props) => {
               <text
                 x={4}
                 y={fieldContent().style.font_size * 0.8}
-                width={size.width - 8}
-                height={size.height}
                 font-family={fieldContent().style.font_family}
-                font-size={fieldContent().style.font_size}
+                font-size={`${fieldContent().style.font_size}`}
                 font-weight={fieldContent().style.font_weight}
                 fill={fieldContent().style.color}
                 text-anchor={
@@ -150,11 +145,14 @@ const ElementRenderer: Component<ElementRendererProps> = (props) => {
 
   return (
     <g
-      key={elementKey()}
       class={`element ${props.selected ? 'element-selected' : ''}`}
-      style={elementStyle()}
+      style={{ ...elementStyle(), cursor: 'pointer' }}
       data-element-id={props.element.id.value}
       data-element-type={props.element.content.type}
+      onClick={(e) => {
+        e.stopPropagation();
+        console.log('Element clicked:', props.element.id.value);
+      }}
     >
       {/* Element content */}
       {renderContent()}
