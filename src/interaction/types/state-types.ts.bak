@@ -1,0 +1,76 @@
+/**
+ * 选择和状态管理相关类型定义
+ */
+
+import type { Rectangle, Point } from './geometry-types';
+import type { ReportElement } from '../../types';
+
+// 选择边界信息
+export interface SelectionBounds {
+  bounds: Rectangle;           // 选择边界矩形
+  elements: string[];         // 选中的元素ID列表
+  center: Point;              // 选择区域中心点
+  isEmpty: boolean;           // 是否为空选择
+  isSingleElement: boolean;   // 是否只选中一个元素
+}
+
+// 选择变化事件
+export interface SelectionChangeEvent {
+  type: 'add' | 'remove' | 'replace' | 'clear';
+  elementIds: string[];
+  previousSelection: string[];
+  newSelection: string[];
+}
+
+// 拖拽操作状态
+export interface DragOperation {
+  elementIds: string[];      // 被拖拽的元素ID列表
+  startPositions: Map<string, Point>; // 元素初始位置
+  currentOffset: Point;      // 当前拖拽偏移量
+  totalOffset: Point;        // 总拖拽偏移量
+  startTime: number;         // 拖拽开始时间
+}
+
+// 调整大小操作状态
+export interface ResizeOperation {
+  elementId: string;         // 被调整的元素ID
+  handle: string;           // 调整控制点
+  startBounds: Rectangle;   // 初始边界
+  currentBounds: Rectangle; // 当前边界
+  aspectRatio: number;      // 初始宽高比
+  startTime: number;        // 开始时间
+  constraints: {
+    maintainAspectRatio: boolean;
+    resizeFromCenter: boolean;
+    minSize: { width: number; height: number };
+    maxSize?: { width: number; height: number };
+  };
+}
+
+// 框选操作状态
+export interface BoxSelectOperation {
+  startPoint: Point;        // 框选起始点
+  currentPoint: Point;      // 当前鼠标位置
+  selectionRect: Rectangle; // 框选矩形
+  mode: 'replace' | 'add' | 'subtract'; // 选择模式
+}
+
+// 历史记录条目
+export interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  action: string;
+  description: string;
+  beforeState: any;
+  afterState: any;
+  affectedElements: string[];
+}
+
+// 撤销/重做管理器状态
+export interface UndoRedoState {
+  history: HistoryEntry[];
+  currentIndex: number;
+  maxHistorySize: number;
+  canUndo: boolean;
+  canRedo: boolean;
+}

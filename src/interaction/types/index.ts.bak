@@ -1,0 +1,62 @@
+/**
+ * 交互系统类型统一导出
+ */
+
+// 几何类型
+export type {
+  Point,
+  Rectangle,
+  Size,
+  Transform,
+  BoundingBox,
+  MouseState,
+  HandleDirection
+} from './geometry-types';
+
+// 交互类型
+export {
+  InteractionMode,
+  type HitTestResult,
+  type ActionContext,
+  type InteractionContext,
+  type InteractionEvent,
+  type InteractionConfig
+} from './interaction-types';
+
+// 状态类型
+export type {
+  SelectionBounds,
+  SelectionChangeEvent,
+  DragOperation,
+  ResizeOperation,
+  BoxSelectOperation,
+  HistoryEntry,
+  UndoRedoState
+} from './state-types';
+
+// 常量定义
+export const DEFAULT_INTERACTION_CONFIG: InteractionConfig = {
+  handleSize: 8,           // 控制点视觉大小 8x8px
+  handleHitSize: 16,       // 控制点响应区域 16x16px
+  handleMargin: 12,        // 控制点边距 12px
+  dragThreshold: 3,        // 拖拽阈值 3px
+  doubleClickThreshold: 300, // 双击阈值 300ms
+  snapThreshold: 5         // 对齐阈值 5px
+};
+
+// 光标映射
+export const CURSOR_MAP = {
+  'nw': 'nw-resize',
+  'n': 'n-resize',
+  'ne': 'ne-resize',
+  'w': 'w-resize',
+  'e': 'e-resize',
+  'sw': 'sw-resize',
+  's': 's-resize',
+  'se': 'se-resize',
+  'drag': 'grab',
+  'dragging': 'grabbing',
+  'hover': 'pointer',
+  'default': 'default',
+  'crosshair': 'crosshair'
+} as const;

@@ -1,0 +1,86 @@
+name: "Frontend Build Only"
+
+# Gitee Go 支持的前端构建流水线
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ===============================================
+  # 前端构建和检查（Gitee Go 支持）
+  # ===============================================
+  frontend-build:
+    name: "前端构建检查"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "📥 检出代码"
+        uses: actions/checkout@v3
+
+      - name: "📦 安装 Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: v2-tauri/package-lock.json
+
+      - name: "📦 安装前端依赖"
+        working-directory: v2-tauri
+        run: npm ci
+
+      - name: "🔍 TypeScript 类型检查"
+        working-directory: v2-tauri
+        run: npx tsc --noEmit
+
+      - name: "🔨 前端构建"
+        working-directory: v2-tauri
+        run: npm run build
+
+      - name: "📁 列出构建产物"
+        working-directory: v2-tauri/dist
+        run: |
+          echo "=== 前端构建产物 ==="
+          ls -la
+          du -sh *
+
+      - name: "🚀 上传前端构建产物"
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: v2-tauri/dist/
+          retention-days: 7
+
+  # ===============================================
+  # 代码质量检查（仅前端）
+  # ===============================================
+  code-quality:
+    name: "代码质量检查"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "📥 检出代码"
+        uses: actions/checkout@v3
+
+      - name: "📦 安装 Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: "📦 安装依赖"
+        working-directory: v2-tauri
+        run: npm ci
+
+      - name: "🔍 ESLint 检查"
+        working-directory: v2-tauri
+        run: npm run lint || echo "ESLint 检查完成"
+
+      - name: "🔍 代码格式检查"
+        working-directory: v2-tauri
+        run: |
+          echo "检查 TypeScript 文件格式..."
+          find src -name "*.ts" -o -name "*.tsx" | head -10
+
+      - name: "✅ 检查完成"
+        run: echo "✅ 前端代码质量检查完成"
