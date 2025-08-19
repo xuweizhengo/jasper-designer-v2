@@ -19,6 +19,18 @@ export interface TextStyle {
   readonly font_weight: string;
   readonly color: string;
   readonly align: TextAlign;
+  // Phase 1新增: 边框和背景支持
+  readonly border?: {
+    readonly color: string;
+    readonly width: number;
+    readonly style: BorderStyleType;
+    readonly radius?: number;
+  };
+  readonly background?: {
+    readonly color: string;
+    readonly opacity?: number;
+    readonly padding?: number;
+  };
 }
 
 export type TextAlign = 'Left' | 'Center' | 'Right';

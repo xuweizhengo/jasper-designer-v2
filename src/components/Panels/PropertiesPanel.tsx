@@ -344,6 +344,136 @@ const TextProperties: Component<{ content: any; onUpdate: (updates: any) => void
             })}
           />
         </PropertyField>
+        
+        {/* Phase 1新增: 背景设置 */}
+        <PropertyField label="背景">
+          <div class="space-y-2">
+            <ColorPicker
+              value={props.content.style.background?.color || 'transparent'}
+              onUpdate={(color) => props.onUpdate({ 
+                style: { 
+                  ...props.content.style, 
+                  background: { 
+                    ...props.content.style.background, 
+                    color 
+                  }
+                }
+              })}
+            />
+            <div class="grid grid-cols-2 gap-2">
+              <PropertyField label="透明度">
+                <NumberInput
+                  value={props.content.style.background?.opacity || 1}
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  onUpdate={(opacity) => props.onUpdate({ 
+                    style: { 
+                      ...props.content.style, 
+                      background: { 
+                        ...props.content.style.background, 
+                        opacity 
+                      }
+                    }
+                  })}
+                />
+              </PropertyField>
+              <PropertyField label="内边距">
+                <NumberInput
+                  value={props.content.style.background?.padding || 0}
+                  min={0}
+                  max={20}
+                  step={1}
+                  unit="px"
+                  onUpdate={(padding) => props.onUpdate({ 
+                    style: { 
+                      ...props.content.style, 
+                      background: { 
+                        ...props.content.style.background, 
+                        padding 
+                      }
+                    }
+                  })}
+                />
+              </PropertyField>
+            </div>
+          </div>
+        </PropertyField>
+        
+        {/* Phase 1新增: 边框设置 */}
+        <PropertyField label="边框">
+          <div class="space-y-2">
+            <ColorPicker
+              value={props.content.style.border?.color || '#000000'}
+              onUpdate={(color) => props.onUpdate({ 
+                style: { 
+                  ...props.content.style, 
+                  border: { 
+                    ...props.content.style.border, 
+                    color 
+                  }
+                }
+              })}
+            />
+            <div class="grid grid-cols-3 gap-2">
+              <PropertyField label="宽度">
+                <NumberInput
+                  value={props.content.style.border?.width || 1}
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  unit="px"
+                  onUpdate={(width) => props.onUpdate({ 
+                    style: { 
+                      ...props.content.style, 
+                      border: { 
+                        ...props.content.style.border, 
+                        width 
+                      }
+                    }
+                  })}
+                />
+              </PropertyField>
+              <PropertyField label="样式">
+                <select
+                  class="property-select"
+                  value={props.content.style.border?.style || 'Solid'}
+                  onChange={(e) => props.onUpdate({ 
+                    style: { 
+                      ...props.content.style, 
+                      border: { 
+                        ...props.content.style.border, 
+                        style: e.target.value 
+                      }
+                    }
+                  })}
+                >
+                  <option value="Solid">实线</option>
+                  <option value="Dashed">虚线</option>
+                  <option value="Dotted">点线</option>
+                </select>
+              </PropertyField>
+              <PropertyField label="圆角">
+                <NumberInput
+                  value={props.content.style.border?.radius || 0}
+                  min={0}
+                  max={20}
+                  step={1}
+                  unit="px"
+                  onUpdate={(radius) => props.onUpdate({ 
+                    style: { 
+                      ...props.content.style, 
+                      border: { 
+                        ...props.content.style.border, 
+                        radius 
+                      }
+                    }
+                  })}
+                />
+              </PropertyField>
+            </div>
+          </div>
+        </PropertyField>
       </div>
     </PropertyGroup>
   );

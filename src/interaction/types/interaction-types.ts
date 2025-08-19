@@ -8,6 +8,7 @@ import type { Point } from './geometry-types';
 // 交互模式枚举 - 简化版本
 export enum InteractionMode {
   IDLE = 'idle',           // 空闲状态 - 默认状态，等待用户操作
+  HOVER = 'hover',         // 悬停状态 - 鼠标悬停在元素或控制点上
   SELECTING = 'selecting', // 框选中 - 用户正在拖拽选择矩形
   DRAGGING = 'dragging',   // 拖拽中 - 用户正在拖拽移动元素
 }
@@ -39,5 +40,5 @@ export interface InteractionConfig {
 export const DEFAULT_INTERACTION_CONFIG: InteractionConfig = {
   dragThreshold: 3,
   updateThrottle: 16,  // 优化到60fps (1000/60≈16ms)
-  enableDebugLog: false  // 生产环境关闭调试以提升性能
+  enableDebugLog: true  // 开启调试日志以便问题排查
 };

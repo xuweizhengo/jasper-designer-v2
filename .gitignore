@@ -134,3 +134,9 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
+
+# Build artifacts and legacy files (技术债务预防)
+builds/archives/old-builds*/
+scripts/legacy-package-scripts/
+package-*.sh
+*.tar.gz.backup

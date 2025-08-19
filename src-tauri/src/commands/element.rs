@@ -53,6 +53,44 @@ pub async fn create_element(
                         .unwrap_or("#000000")
                         .to_string(),
                     align: TextAlign::Left,
+                    // Phase 1修复: 正确处理border数据
+                    border: text_data.get("style")
+                        .and_then(|style| style.get("border"))
+                        .and_then(|border| {
+                            Some(crate::core::element::TextBorderStyle {
+                                color: border.get("color")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("#000000")
+                                    .to_string(),
+                                width: border.get("width")
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(0.0),
+                                style: match border.get("style")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("Solid") {
+                                    "Dashed" => BorderStyleType::Dashed,
+                                    "Dotted" => BorderStyleType::Dotted,
+                                    _ => BorderStyleType::Solid,
+                                },
+                                radius: border.get("radius")
+                                    .and_then(|v| v.as_f64()),
+                            })
+                        }),
+                    // Phase 1修复: 正确处理background数据
+                    background: text_data.get("style")
+                        .and_then(|style| style.get("background"))
+                        .and_then(|bg| {
+                            Some(crate::core::element::TextBackgroundStyle {
+                                color: bg.get("color")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("transparent")
+                                    .to_string(),
+                                opacity: bg.get("opacity")
+                                    .and_then(|v| v.as_f64()),
+                                padding: bg.get("padding")
+                                    .and_then(|v| v.as_f64()),
+                            })
+                        }),
                 },
             }
         }
@@ -158,6 +196,44 @@ pub async fn create_element(
                         .unwrap_or("#000000")
                         .to_string(),
                     align: TextAlign::Left,
+                    // Phase 1修复: 正确处理border数据
+                    border: field_data.get("style")
+                        .and_then(|style| style.get("border"))
+                        .and_then(|border| {
+                            Some(crate::core::element::TextBorderStyle {
+                                color: border.get("color")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("#000000")
+                                    .to_string(),
+                                width: border.get("width")
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(0.0),
+                                style: match border.get("style")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("Solid") {
+                                    "Dashed" => BorderStyleType::Dashed,
+                                    "Dotted" => BorderStyleType::Dotted,
+                                    _ => BorderStyleType::Solid,
+                                },
+                                radius: border.get("radius")
+                                    .and_then(|v| v.as_f64()),
+                            })
+                        }),
+                    // Phase 1修复: 正确处理background数据
+                    background: field_data.get("style")
+                        .and_then(|style| style.get("background"))
+                        .and_then(|bg| {
+                            Some(crate::core::element::TextBackgroundStyle {
+                                color: bg.get("color")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("transparent")
+                                    .to_string(),
+                                opacity: bg.get("opacity")
+                                    .and_then(|v| v.as_f64()),
+                                padding: bg.get("padding")
+                                    .and_then(|v| v.as_f64()),
+                            })
+                        }),
                 },
             }
         }
@@ -478,6 +554,42 @@ fn update_element_content(
                         _ => TextAlign::Left,
                     };
                 }
+                
+                // Phase 1修复: 添加border更新处理
+                if let Some(border_updates) = style_updates.get("border") {
+                    style.border = Some(crate::core::element::TextBorderStyle {
+                        color: border_updates.get("color")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("#000000")
+                            .to_string(),
+                        width: border_updates.get("width")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(1.0),
+                        style: match border_updates.get("style")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Solid") {
+                            "Dashed" => BorderStyleType::Dashed,
+                            "Dotted" => BorderStyleType::Dotted,
+                            _ => BorderStyleType::Solid,
+                        },
+                        radius: border_updates.get("radius")
+                            .and_then(|v| v.as_f64()),
+                    });
+                }
+                
+                // Phase 1修复: 添加background更新处理
+                if let Some(background_updates) = style_updates.get("background") {
+                    style.background = Some(crate::core::element::TextBackgroundStyle {
+                        color: background_updates.get("color")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("transparent")
+                            .to_string(),
+                        opacity: background_updates.get("opacity")
+                            .and_then(|v| v.as_f64()),
+                        padding: background_updates.get("padding")
+                            .and_then(|v| v.as_f64()),
+                    });
+                }
             }
             
             Ok(ElementContent::Text { content, style })
@@ -610,6 +722,42 @@ fn update_element_content(
                         "right" => TextAlign::Right,
                         _ => TextAlign::Left,
                     };
+                }
+                
+                // Phase 1修复: 添加DataField的border更新处理
+                if let Some(border_updates) = style_updates.get("border") {
+                    style.border = Some(crate::core::element::TextBorderStyle {
+                        color: border_updates.get("color")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("#000000")
+                            .to_string(),
+                        width: border_updates.get("width")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(1.0),
+                        style: match border_updates.get("style")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Solid") {
+                            "Dashed" => BorderStyleType::Dashed,
+                            "Dotted" => BorderStyleType::Dotted,
+                            _ => BorderStyleType::Solid,
+                        },
+                        radius: border_updates.get("radius")
+                            .and_then(|v| v.as_f64()),
+                    });
+                }
+                
+                // Phase 1修复: 添加DataField的background更新处理
+                if let Some(background_updates) = style_updates.get("background") {
+                    style.background = Some(crate::core::element::TextBackgroundStyle {
+                        color: background_updates.get("color")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("transparent")
+                            .to_string(),
+                        opacity: background_updates.get("opacity")
+                            .and_then(|v| v.as_f64()),
+                        padding: background_updates.get("padding")
+                            .and_then(|v| v.as_f64()),
+                    });
                 }
             }
             

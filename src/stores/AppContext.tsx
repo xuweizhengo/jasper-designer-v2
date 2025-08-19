@@ -20,7 +20,11 @@ interface AppContextType {
   toggleSelection: (id: string) => Promise<void>;
   clearSelection: () => Promise<void>;
   copySelected: () => Promise<void>;
+  copySelectedElements: () => Promise<void>; // 别名，保持兼容性
   pasteElements: (offsetX: number, offsetY: number) => Promise<string[]>;
+  deleteElements: (ids: string[]) => Promise<void>;
+  selectAllElements: () => Promise<void>;
+  moveElements: (ids: string[], deltaX: number, deltaY: number) => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   updateCanvasConfig: (config: Partial<CanvasConfig>) => Promise<void>;
@@ -120,6 +124,7 @@ export const AppProvider: ParentComponent = (props) => {
       });
       
       await loadAppState();
+      
     } catch (error) {
       console.error('Failed to update element:', error);
       throw error;
@@ -206,6 +211,7 @@ export const AppProvider: ParentComponent = (props) => {
         await invoke('clear_selection');
       }
       await loadAppState();
+      
     } catch (error) {
       console.error('Failed to select multiple elements:', error);
       throw error;
@@ -304,6 +310,66 @@ export const AppProvider: ParentComponent = (props) => {
     }
   };
 
+  // 新增方法实现
+  const copySelectedElements = async (): Promise<void> => {
+    // 别名方法，指向 copySelected
+    return copySelected();
+  };
+
+  const deleteElements = async (ids: string[]): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      // 批量删除元素
+      for (const id of ids) {
+        await invoke('delete_element', { elementId: id });
+      }
+      
+      await loadAppState();
+    } catch (error) {
+      console.error('Failed to delete elements:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectAllElements = async (): Promise<void> => {
+    try {
+      const allIds = state.elements.map(element => element.id);
+      await selectMultiple(allIds);
+    } catch (error) {
+      console.error('Failed to select all elements:', error);
+      throw error;
+    }
+  };
+
+  const moveElements = async (ids: string[], deltaX: number, deltaY: number): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      // 构建位置更新数组
+      const updates = state.elements
+        .filter(element => ids.includes(element.id))
+        .map(element => ({
+          element_id: element.id,
+          new_position: {
+            x: element.position.x + deltaX,
+            y: element.position.y + deltaY
+          }
+        }));
+      
+      if (updates.length > 0) {
+        await batchUpdatePositions(updates);
+      }
+    } catch (error) {
+      console.error('Failed to move elements:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateCanvasConfig = async (config: Partial<CanvasConfig>): Promise<void> => {
     try {
       setLoading(true);
@@ -339,7 +405,11 @@ export const AppProvider: ParentComponent = (props) => {
     toggleSelection,
     clearSelection,
     copySelected,
+    copySelectedElements,
     pasteElements,
+    deleteElements,
+    selectAllElements,
+    moveElements,
     undo,
     redo,
     updateCanvasConfig,

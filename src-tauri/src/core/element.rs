@@ -83,6 +83,11 @@ pub struct TextStyle {
     pub font_weight: String,
     pub color: String,
     pub align: TextAlign,
+    // Phase 1新增: 边框和背景支持
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub border: Option<TextBorderStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background: Option<TextBackgroundStyle>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,6 +95,26 @@ pub enum TextAlign {
     Left,
     Center,
     Right,
+}
+
+// Phase 1新增: 文字专用边框样式
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextBorderStyle {
+    pub color: String,
+    pub width: f64,
+    pub style: BorderStyleType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub radius: Option<f64>,
+}
+
+// Phase 1新增: 文字专用背景样式
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextBackgroundStyle {
+    pub color: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opacity: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub padding: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

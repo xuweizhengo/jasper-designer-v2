@@ -1,6 +1,7 @@
 import { Component, onMount } from "solid-js";
 import MainLayout from "./components/Layout/MainLayout";
 import { AppProvider } from "./stores/AppContext";
+import KeyboardManager from "./components/KeyboardShortcuts/KeyboardManager";
 
 const App: Component = () => {
   onMount(() => {
@@ -10,6 +11,7 @@ const App: Component = () => {
 
   return (
     <AppProvider>
+      <KeyboardManager />
       <MainLayout />
     </AppProvider>
   );

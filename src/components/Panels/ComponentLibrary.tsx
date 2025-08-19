@@ -24,6 +24,19 @@ const ComponentLibrary: Component = () => {
           font_weight: 'normal',
           color: '#000000',
           align: 'Left' as const,
+          // Phase 1修复: 提供可见的border默认结构
+          border: {
+            color: '#cccccc',
+            width: 1,
+            style: 'Solid',
+            radius: 0,
+          },
+          // Phase 1修复: 提供可见的background默认结构
+          background: {
+            color: '#f8f9fa',
+            opacity: 0.8,
+            padding: 2,
+          },
         },
       }),
     },
@@ -44,6 +57,19 @@ const ComponentLibrary: Component = () => {
           font_weight: 'normal',
           color: '#000000',
           align: 'Left' as const,
+          // Phase 1修复: 提供可见的border默认结构
+          border: {
+            color: '#cccccc',
+            width: 1,
+            style: 'Solid',
+            radius: 0,
+          },
+          // Phase 1修复: 提供可见的background默认结构
+          background: {
+            color: '#f8f9fa',
+            opacity: 0.8,
+            padding: 2,
+          },
         },
       }),
     },
@@ -109,6 +135,19 @@ const ComponentLibrary: Component = () => {
           font_weight: 'bold',
           color: '#000000',
           align: 'Center' as const,
+          // Phase 1修复: 提供可见的border默认结构
+          border: {
+            color: '#cccccc',
+            width: 1,
+            style: 'Solid',
+            radius: 0,
+          },
+          // Phase 1修复: 提供可见的background默认结构
+          background: {
+            color: '#f8f9fa',
+            opacity: 0.8,
+            padding: 2,
+          },
         },
       }),
     },
@@ -129,6 +168,19 @@ const ComponentLibrary: Component = () => {
           font_weight: 'bold',
           color: '#000000',
           align: 'Right' as const,
+          // Phase 1修复: 提供可见的border默认结构
+          border: {
+            color: '#cccccc',
+            width: 1,
+            style: 'Solid',
+            radius: 0,
+          },
+          // Phase 1修复: 提供可见的background默认结构
+          background: {
+            color: '#f8f9fa',
+            opacity: 0.8,
+            padding: 2,
+          },
         },
       }),
     },
@@ -148,6 +200,19 @@ const ComponentLibrary: Component = () => {
           font_weight: 'normal',
           color: '#000000',
           align: 'Left' as const,
+          // Phase 1修复: 提供可见的border默认结构
+          border: {
+            color: '#cccccc',
+            width: 1,
+            style: 'Solid',
+            radius: 0,
+          },
+          // Phase 1修复: 提供可见的background默认结构
+          background: {
+            color: '#f8f9fa',
+            opacity: 0.8,
+            padding: 2,
+          },
         },
       }),
     },

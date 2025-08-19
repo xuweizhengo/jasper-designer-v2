@@ -1,0 +1,201 @@
+name: Build Windows and Notify Server
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-pc-windows-msvc
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build application
+      run: npm run tauri build
+      
+    - name: Package build files
+      shell: powershell
+      run: |
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $packageName = "jasper-designer-v2-GITHUB-$timestamp"
+        New-Item -ItemType Directory -Path $packageName -Force
+        
+        # 复制主要构建文件
+        $sourcePaths = @(
+          "src-tauri/target/release/bundle/msi/*.msi",
+          "src-tauri/target/release/*.exe", 
+          "src-tauri/target/release/*.dll"
+        )
+        
+        foreach ($path in $sourcePaths) {
+          if (Test-Path $path) {
+            Copy-Item $path $packageName/ -Force -ErrorAction SilentlyContinue
+          }
+        }
+        
+        # 复制前端资源
+        if (Test-Path "dist") {
+          Copy-Item "dist/*" $packageName/ -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        # 复制图标
+        if (Test-Path "src-tauri/icons") {
+          New-Item -ItemType Directory -Path "$packageName/icons" -Force
+          Copy-Item "src-tauri/icons/*" "$packageName/icons/" -Force -ErrorAction SilentlyContinue
+        }
+        
+        # 创建构建信息文件
+        @"
+        🎉 Jasper Designer Windows版本 - GitHub Actions构建
+        
+        构建信息:
+        - 构建时间: $(Get-Date)
+        - 构建来源: GitHub Actions
+        - 分支/标签: $env:GITHUB_REF_NAME
+        - 提交哈希: $env:GITHUB_SHA
+        - 构建ID: $env:GITHUB_RUN_ID
+        
+        技术债务清理状态:
+        ✅ 项目存储优化96MB
+        ✅ 统一构建管理系统  
+        ✅ 开发流程标准化
+        ✅ M3功能85%完成
+        
+        功能状态:
+        ✅ 属性面板完整实现
+        ✅ ResizeHandles系统 (8个控制点)
+        ✅ 对齐分布工具 (8种算法)
+        🔧 核心快捷键系统 (进行中)
+        📋 群组右键菜单 (已设计)
+        
+        使用方法:
+        1. 解压文件包
+        2. 运行 jasper-designer.exe
+        3. 测试所有M3功能
+        "@  | Out-File -FilePath "$packageName/BUILD_INFO.txt" -Encoding UTF8
+        
+        # 创建启动脚本
+        @'
+        @echo off
+        title Jasper Designer V2 - GitHub Actions构建版
+        echo ===============================================
+        echo 🎉 Jasper Designer V2 - GitHub Actions构建
+        echo ===============================================
+        echo.
+        echo ✅ 这是从GitHub Actions自动构建的版本
+        echo ✅ 已完成技术债务清理和优化
+        echo ✅ M3高级编辑功能85%%完成
+        echo.
+        echo 🚀 启动应用...
+        start "" "jasper-designer.exe"
+        '@ | Out-File -FilePath "$packageName/run-github-build.bat" -Encoding ASCII
+        
+        # 打包
+        Compress-Archive -Path $packageName -DestinationPath "$packageName.zip" -Force
+        
+        # 设置环境变量供后续步骤使用
+        echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
+        echo "PACKAGE_ZIP=$packageName.zip" >> $env:GITHUB_ENV
+        
+        # 显示构建结果
+        echo "📦 构建包创建完成: $packageName.zip"
+        Get-ChildItem $packageName | Format-Table Name, Length, LastWriteTime
+      
+    - name: Upload to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        source: "${{ env.PACKAGE_ZIP }}"
+        target: "/root/project/jasper/builds/github-actions/"
+        
+    - name: Create server notification and cleanup
+      uses: appleboy/ssh-action@v0.1.11
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          # 创建醒目的通知文件
+          cat > /root/NEW_GITHUB_BUILD_READY.txt << EOF
+          =====================================
+          🎉 GitHub Actions 构建完成！
+          =====================================
+          项目: Jasper Designer V2
+          构建时间: $(date '+%Y-%m-%d %H:%M:%S')
+          构建来源: GitHub Actions (Windows环境)
+          分支/标签: ${{ github.ref_name }}
+          提交信息: ${{ github.event.head_commit.message }}
+          提交哈希: ${{ github.sha }}
+          构建ID: ${{ github.run_id }}
+          
+          📦 构建文件:
+          位置: /root/project/jasper/builds/github-actions/${{ env.PACKAGE_ZIP }}
+          大小: $(du -sh "/root/project/jasper/builds/github-actions/${{ env.PACKAGE_ZIP }}" | cut -f1)
+          
+          📝 使用方法:
+          1. 解压构建包:
+             cd /root/project/jasper/builds/github-actions/
+             unzip "${{ env.PACKAGE_ZIP }}"
+          
+          2. 下载到本地Windows环境测试:
+             scp root@43.160.200.239:/root/project/jasper/builds/github-actions/${{ env.PACKAGE_ZIP }} ./
+          
+          3. Windows环境运行:
+             解压后双击 jasper-designer.exe 或 run-github-build.bat
+          
+          🧪 测试重点:
+          - 基础功能: 界面加载、组件拖拽、元素选择
+          - M3功能: 属性面板、ResizeHandles、对齐工具
+          - 技术债务: 验证清理后功能完整性
+          
+          🗑️ 查看后删除此文件:
+          rm /root/NEW_GITHUB_BUILD_READY.txt
+          =====================================
+          EOF
+          
+          # 创建构建历史记录
+          echo "$(date '+%Y-%m-%d %H:%M:%S'): GitHub Actions构建完成 - ${{ env.PACKAGE_ZIP }} (分支: ${{ github.ref_name }})" >> /root/github-build-history.log
+          
+          # 创建最新版本软链接
+          cd /root/project/jasper/builds/github-actions/
+          ln -sf "${{ env.PACKAGE_ZIP }}" jasper-latest-github.zip
+          
+          # 清理超过5个的旧构建文件
+          ls -t jasper-designer-v2-GITHUB-*.zip 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+          
+          # 显示当前构建文件
+          echo ""
+          echo "📁 当前GitHub Actions构建文件:"
+          ls -lah /root/project/jasper/builds/github-actions/jasper-designer-v2-GITHUB-*.zip 2>/dev/null || echo "无历史构建文件"
+          echo ""
+          echo "🔗 最新构建软链接:"
+          ls -lah /root/project/jasper/builds/github-actions/jasper-latest-github.zip 2>/dev/null || echo "软链接创建失败"
+          
+    - name: Upload build artifacts (GitHub备份)
+      uses: actions/upload-artifact@v4
+      with:
+        name: jasper-designer-windows-${{ github.run_id }}
+        path: ${{ env.PACKAGE_ZIP }}
+        retention-days: 30

@@ -419,7 +419,32 @@ html, body {
   background-size: 10px 10px;
 }
 
+/* 文字元素专用选中效果 - 柔和背景+虚线边框 */
+.text-element-selected {
+  /* 移除生硬的stroke描边 */
+  stroke: none !important;
+}
+
+.text-element-selected .text-selection-background {
+  fill: rgba(59, 130, 246, 0.08);
+  stroke: #3b82f6;
+  stroke-width: 1;
+  stroke-dasharray: 3,3;
+  rx: 2;
+  ry: 2;
+  /* 微妙外发光效果 */
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.2));
+}
+
+/* 通用元素选中效果 (保持原有) */
 .element-selected {
+  stroke: var(--color-selection) !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+/* 非文字元素使用原有选中效果 */
+.element-selected:not(.text-element-selected) {
   stroke: var(--color-selection) !important;
   stroke-width: 2px !important;
   stroke-dasharray: none !important;

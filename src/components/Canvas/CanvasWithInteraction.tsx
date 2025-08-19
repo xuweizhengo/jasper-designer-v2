@@ -3,13 +3,14 @@
  * 这个版本完全消除了光标冲突和事件混乱问题
  */
 
-import { Component, createMemo, onMount, createSignal, For } from 'solid-js';
+import { Component, createMemo, onMount, createSignal, For, Show } from 'solid-js';
 import { useAppContext } from '../../stores/AppContext';
 import CanvasGrid from './CanvasGrid';
+import ElementRenderer from './ElementRenderer';
 import ResizeHandles from './ResizeHandles';
 import { SimpleInteractionLayer } from '../../interaction/components/SimpleInteractionLayer';
+import { AlignmentToolbar } from '../alignment/AlignmentToolbar';
 import type { Point } from '../../interaction/types/geometry-types';
-import type { ReportElement } from '../../types';
 
 const CanvasWithInteraction: Component = () => {
   const { 
@@ -18,7 +19,8 @@ const CanvasWithInteraction: Component = () => {
     clearSelection, 
     createElement, 
     selectMultiple,
-    updateElement
+    updateElement,
+    batchUpdatePositions
   } = useAppContext();
   
   let canvasRef: SVGSVGElement | undefined;
@@ -57,6 +59,19 @@ const CanvasWithInteraction: Component = () => {
       }
     } catch (error) {
       console.error('❌ 选择元素失败:', error);
+    }
+  };
+
+  const handleBatchUpdatePositions = async (updates: Array<{element_id: string, new_position: {x: number, y: number}}>) => {
+    // 🔥 关键修复: 新增批量更新处理函数，提升多元素拖拽性能
+    if (import.meta.env.DEV) {
+      console.log('📦 批量更新位置', { count: updates.length, updates });
+    }
+    
+    try {
+      await batchUpdatePositions(updates);
+    } catch (error) {
+      console.error('❌ 批量更新位置失败:', error);
     }
   };
 
@@ -197,11 +212,11 @@ const CanvasWithInteraction: Component = () => {
                 stroke-width="1"
               />
               
-              {/* Elements Layer - 移除所有旧的事件处理 */}
+              {/* Elements Layer - 使用统一的ElementRenderer */}
               <g class="elements-layer">
                 <For each={visibleElements()}>
                   {(element) => (
-                    <ElementRendererPure
+                    <ElementRenderer
                       element={element}
                       selected={selectedElementIds().includes(element.id)}
                     />
@@ -225,178 +240,44 @@ const CanvasWithInteraction: Component = () => {
               getAllElements={() => [...state.elements]} // 创建可变副本
               onElementsSelect={handleElementsSelect}
               onElementMove={handleElementMove}
+              onBatchUpdatePositions={handleBatchUpdatePositions}
               onElementResize={handleElementResize}
               onCanvasClick={handleCanvasClick}
               enableDebugMode={import.meta.env.DEV}
             />
+
+            {/* 对齐工具栏 - 当选中2个或更多元素时显示 */}
+            <Show when={selectedElementIds().length >= 2}>
+              <div 
+                style={{
+                  "position": "fixed",
+                  "top": "80px",
+                  "right": "20px", 
+                  "z-index": "1000",
+                  "background": "white",
+                  "border-radius": "8px",
+                  "box-shadow": "0 4px 12px rgba(0, 0, 0, 0.15)",
+                  "border": "1px solid #e5e7eb"
+                }}
+              >
+                <AlignmentToolbar 
+                  selectedElementIds={selectedElementIds}
+                  onAlignmentComplete={(results) => {
+                    console.log('✅ 对齐操作完成:', results);
+                  }}
+                  onAlignmentPreview={(alignmentType) => {
+                    console.log('👁️ 对齐预览:', alignmentType);
+                  }}
+                  onPreviewCancel={() => {
+                    console.log('❌ 取消对齐预览');
+                  }}
+                />
+              </div>
+            </Show>
           </div>
         </div>
       </div>
     </div>
-  );
-};
-
-/**
- * 纯渲染的ElementRenderer - 移除所有事件处理逻辑
- * 只负责渲染，不处理任何交互
- */
-const ElementRendererPure: Component<{ element: ReportElement; selected: boolean }> = (props) => {
-  // 纯渲染模式 - 移除所有交互逻辑
-  const elementStyle = createMemo(() => {
-    const { position } = props.element;
-    return {
-      transform: `translate(${position.x}px, ${position.y}px)`,
-      opacity: props.element.visible ? 1 : 0.5,
-      // 移除cursor设置 - 由InteractionLayer统一管理
-    };
-  });
-
-  // 复用原有的渲染内容逻辑
-  const renderContent = () => {
-    const { content, size } = props.element;
-
-    // Text类型渲染
-    if (content.type === 'Text' && content.content && content.style) {
-      const align = content.style.align;
-      const textAnchor = 
-        align === 'Center' ? 'middle' :
-        align === 'Right' ? 'end' : 'start';
-      
-      const x = 
-        align === 'Center' ? size.width / 2 :
-        align === 'Right' ? size.width : 0;
-
-      return (
-        <text
-          x={x}
-          y={content.style.font_size * 0.75}
-          font-family={content.style.font_family}
-          font-size={`${content.style.font_size}`}
-          font-weight={content.style.font_weight}
-          fill={content.style.color}
-          text-anchor={textAnchor}
-          dominant-baseline="hanging"
-        >
-          {content.content.split('\n').map((line, index) => (
-            <tspan x={x} dy={index === 0 ? 0 : content.style.font_size * 1.2}>
-              {line}
-            </tspan>
-          ))}
-        </text>
-      );
-    }
-
-    // Rectangle类型渲染
-    if (content.type === 'Rectangle') {
-      const opacity = content.opacity !== undefined ? content.opacity : 1;
-      const cornerRadius = content.corner_radius || 0;
-      
-      return (
-        <rect
-          x={0}
-          y={0}
-          width={size.width}
-          height={size.height}
-          rx={cornerRadius}
-          ry={cornerRadius}
-          fill={content.fill_color || 'transparent'}
-          fill-opacity={opacity}
-          stroke={content.border?.color || '#000000'}
-          stroke-width={content.border?.width || 1}
-          stroke-opacity={opacity}
-          stroke-dasharray={
-            content.border?.style === 'Dashed' ? '5,5' :
-            content.border?.style === 'Dotted' ? '2,2' : 'none'
-          }
-        />
-      );
-    }
-
-    // Line类型渲染
-    if (content.type === 'Line') {
-      const opacity = content.opacity !== undefined ? content.opacity : 1;
-      const lineStyle = content.line_style || 'Solid';
-      
-      const strokeDasharray = 
-        lineStyle === 'Dashed' ? '8,4' :
-        lineStyle === 'Dotted' ? '2,2' :
-        lineStyle === 'DashDot' ? '8,4,2,4' : 'none';
-      
-      return (
-        <line
-          x1={0}
-          y1={size.height / 2}
-          x2={size.width}
-          y2={size.height / 2}
-          stroke={content.color}
-          stroke-width={content.width}
-          stroke-opacity={opacity}
-          stroke-dasharray={strokeDasharray}
-        />
-      );
-    }
-
-    // DataField类型渲染
-    if (content.type === 'DataField' && content.style) {
-      return (
-        <>
-          <rect
-            x={0}
-            y={0}
-            width={size.width}
-            height={size.height}
-            fill="rgba(59, 130, 246, 0.1)"
-            stroke="rgba(59, 130, 246, 0.3)"
-            stroke-width="1"
-            stroke-dasharray="2,2"
-          />
-          <text
-            x={
-              content.style.align === 'Center' ? size.width / 2 :
-              content.style.align === 'Right' ? size.width - 4 : 4
-            }
-            y={content.style.font_size * 0.8}
-            font-family={content.style.font_family}
-            font-size={`${content.style.font_size}`}
-            font-weight={content.style.font_weight}
-            fill={content.style.color}
-            text-anchor={
-              content.style.align === 'Center' ? 'middle' :
-              content.style.align === 'Right' ? 'end' : 'start'
-            }
-            dominant-baseline="hanging"
-          >
-            {content.expression || '[数据字段]'}
-          </text>
-        </>
-      );
-    }
-    
-    // 默认渲染 - 其他类型
-    return (
-      <rect
-        x={0}
-        y={0}
-        width={size.width}
-        height={size.height}
-        fill="#f0f0f0"
-        stroke="#ccc"
-        stroke-width="1"
-        stroke-dasharray="5,5"
-      />
-    );
-  };
-
-  return (
-    <g
-      class={`element ${props.selected ? 'element-selected' : ''}`}
-      style={elementStyle()}
-      data-element-id={props.element.id}
-      data-element-type={props.element.content.type}
-      // 完全移除所有事件处理 - 由InteractionLayer统一管理
-    >
-      {renderContent()}
-    </g>
   );
 };
 
