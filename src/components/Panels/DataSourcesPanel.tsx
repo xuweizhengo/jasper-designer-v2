@@ -7,7 +7,7 @@ import './DataSourcesPanel.css';
 
 // 统一的类型显示函数（供整个文件复用）
 const displayTypeFromSource = (source: DataSourceInfo) => {
-  const raw = (source.type_name || source.provider_type || '').toLowerCase();
+  const raw = ((source as any).type_name || (source as any).provider_type || (source as any).providerType || '').toLowerCase();
   if (raw.includes('database_mysql')) return 'MySQL';
   if (raw.includes('database_postgresql')) return 'PostgreSQL';
   if (raw === 'json') return 'JSON';
@@ -15,7 +15,7 @@ const displayTypeFromSource = (source: DataSourceInfo) => {
   if (raw === 'excel') return 'Excel';
   if (raw.startsWith('api')) return 'API';
   if (raw.startsWith('database')) return 'Database';
-  return source.type_name || source.provider_type || 'Unknown';
+  return (source as any).type_name || (source as any).provider_type || (source as any).providerType || 'Unknown';
 };
 
 interface DataSourcesPanelProps {
@@ -178,13 +178,12 @@ export function DataSourcesPanel(props: DataSourcesPanelProps) {
       console.log('📋 数据源信息:', {
         id: source.id,
         name: source.name,
-        type_name: source.type_name,
-        provider_type: source.provider_type,
+        providerType: (source as any).providerType || (source as any).provider_type,
         config: source.config
       });
 
       // 对于数据库类型，确保使用正确的provider_type
-      let providerType = source.provider_type || source.type_name;
+      let providerType = (source as any).providerType || (source as any).provider_type || (source as any).type_name;
       if (source.name.includes('MySQL') || source.name.includes('数据库') || 
           JSON.stringify(source.config).includes('mysql') ||
           JSON.stringify(source.config).includes('3306')) {
@@ -404,11 +403,11 @@ function DataSourcesList(props: DataSourcesListProps) {
                 <div class="source-meta">
                   <div class="meta-item">
                     <span>创建时间:</span>
-                    <span>{formatDate(source.created_at)}</span>
+                    <span>{formatDate((source as any).createdAt || (source as any).created_at)}</span>
                   </div>
                   <div class="meta-item">
                     <span>最后更新:</span>
-                    <span>{formatDate(source.last_updated)}</span>
+                    <span>{formatDate((source as any).lastUpdated || (source as any).last_updated)}</span>
                   </div>
                 </div>
 
@@ -503,7 +502,7 @@ function EditDataSourceForm(props: EditDataSourceFormProps) {
 
     try {
       console.log('🔄 测试连接配置...');
-      const success = await DataSourceAPI.testConnection(props.dataSource.type_name, current.config);
+      const success = await DataSourceAPI.testConnection(((props.dataSource as any).providerType || (props.dataSource as any).provider_type), current.config);
       
       if (success) {
         console.log('✅ 连接测试成功');
@@ -591,7 +590,7 @@ function EditDataSourceForm(props: EditDataSourceFormProps) {
         <div class="header-info">
           <h3>编辑数据源</h3>
           <div class="source-meta">
-            <span class="source-type">{props.dataSource.type_name}</span>
+            <span class="source-type">{(props.dataSource as any).providerType || (props.dataSource as any).type_name}</span>
             <span class="source-id">ID: {props.dataSource.id}</span>
           </div>
         </div>
@@ -694,13 +693,13 @@ function EditDataSourceForm(props: EditDataSourceFormProps) {
             <div class="status-item">
               <span class="status-label">创建时间:</span>
               <span class="status-value">
-                {new Date(props.dataSource.created_at).toLocaleString('zh-CN')}
+                {new Date(((props.dataSource as any).createdAt || (props.dataSource as any).created_at)).toLocaleString('zh-CN')}
               </span>
             </div>
             <div class="status-item">
               <span class="status-label">最后更新:</span>
               <span class="status-value">
-                {new Date(props.dataSource.last_updated).toLocaleString('zh-CN')}
+                {new Date(((props.dataSource as any).lastUpdated || (props.dataSource as any).last_updated)).toLocaleString('zh-CN')}
               </span>
             </div>
           </div>
@@ -773,8 +772,8 @@ function DataPreview(props: DataPreviewProps) {
       <div class="preview-header">
         <button class="back-btn" onClick={props.onBack}>← 返回</button>
         <h3>数据预览: {props.dataSource.name}</h3>
-        <div class="preview-info">
-          共 {props.data.total_rows} 行数据，显示前 {props.data.rows.length} 行
+          <div class="preview-info">
+          共 {(props.data as any).totalCount ?? (props.data as any).total_rows} 行数据，显示前 {props.data.rows.length} 行
         </div>
       </div>
 

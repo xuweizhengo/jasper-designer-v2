@@ -8,14 +8,14 @@ export async function testDataSourceIntegration(): Promise<boolean> {
     // 1. 测试获取可用数据源类型
     console.log('1. 测试获取可用数据源类型...');
     const types = await DataSourceAPI.getAvailableTypes();
-    console.log(`✅ 找到 ${types.length} 种数据源类型:`, types.map(t => t.display_name).join(', '));
+    console.log(`✅ 找到 ${types.length} 种数据源类型:`, types.map((t: any) => t.displayName || t.display_name).join(', '));
     
     if (types.length === 0) {
       throw new Error('没有找到任何可用的数据源类型');
     }
 
     // 2. 测试JSON数据源类型
-    const jsonType = types.find(t => t.type_name === 'json');
+    const jsonType = types.find(t => (t as any).typeName === 'json' || (t as any).type_name === 'json');
     if (!jsonType) {
       throw new Error('没有找到JSON数据源类型');
     }

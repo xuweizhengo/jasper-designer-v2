@@ -38,7 +38,7 @@ export class DataContextManagerImpl implements DataContextManager {
       console.log('🔍 找到数据源:', dataSource);
 
       // 兼容性处理：处理后端可能返回的不同字段名
-      const providerType = dataSource.provider_type || 
+      const providerType = (dataSource as any).providerType || 
                           (dataSource as any).type_name || 
                           'json'; // 兜底值
 
@@ -71,7 +71,7 @@ export class DataContextManagerImpl implements DataContextManager {
         },
         currentRecord: {
           index: 0,
-          total: previewData.total_rows ?? previewData.total_count ?? 0,
+          total: (previewData as any).totalCount ?? (previewData as any).total_rows ?? (previewData as any).total_count ?? 0,
           data: previewData.rows[0] || {}
         },
         fields

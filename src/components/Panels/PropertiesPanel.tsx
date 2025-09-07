@@ -783,7 +783,7 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
                 <For each={dataSources()}>
                   {(dataSource) => (
                     <option value={dataSource.id}>
-                      {dataSource.name} ({dataSource.provider_type})
+                      {dataSource.name} ({(dataSource as any).providerType || (dataSource as any).provider_type})
                     </option>
                   )}
                 </For>
@@ -803,8 +803,8 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
                   {selectedDataSource()!.status === 'active' ? '活跃' : 
                    selectedDataSource()!.status === 'error' ? '错误' : '禁用'}
                 </span></div>
-                <div><span class="font-medium">类型:</span> {selectedDataSource()!.provider_type}</div>
-                <div><span class="font-medium">更新:</span> {new Date(selectedDataSource()!.last_updated).toLocaleString('zh-CN')}</div>
+                <div><span class="font-medium">类型:</span> {(selectedDataSource() as any)!.providerType || (selectedDataSource() as any)!.provider_type}</div>
+                <div><span class="font-medium">更新:</span> {new Date(((selectedDataSource() as any)!.lastUpdated || (selectedDataSource() as any)!.last_updated)).toLocaleString('zh-CN')}</div>
               </div>
             </div>
           </Show>

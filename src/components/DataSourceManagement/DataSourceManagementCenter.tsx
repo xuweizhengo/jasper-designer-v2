@@ -74,7 +74,7 @@ export function DataSourceManagementCenter(props: DataSourceManagementCenterProp
 
   // 筛选数据源
   const getReadableType = (source: DataSourceInfo) => {
-    const raw = (source.type_name || source.provider_type || '').toLowerCase();
+    const raw = (source.providerType || '').toLowerCase();
     if (raw.includes('database_mysql')) return 'mysql';
     if (raw.includes('database_postgresql')) return 'postgresql';
     if (raw.includes('database')) return 'database';
@@ -176,7 +176,7 @@ export function DataSourceManagementCenter(props: DataSourceManagementCenterProp
         return;
       }
 
-      const success = await DataSourceAPI.testConnection(source.provider_type, source.config || {});
+      const success = await DataSourceAPI.testConnection((source as any).providerType || (source as any).provider_type, source.config || {});
       
       if (success) {
         alert(`✅ 数据源 "${source.name}" 连接测试成功！`);
@@ -292,11 +292,11 @@ export function DataSourceManagementCenter(props: DataSourceManagementCenterProp
                     </li>
                     <For each={availableTypes()}>
                       {(type) => (
-                        <li class={typeFilter() === type.type_name ? 'active' : ''}>
-                          <button onClick={() => setTypeFilter(type.type_name)}>
+                        <li class={typeFilter() === type.typeName ? 'active' : ''}>
+                          <button onClick={() => setTypeFilter(type.typeName)}>
                             {type.category === 'file' ? '📄' : 
                              type.category === 'api' ? '🌐' : 
-                             type.category === 'database' ? '🗄️' : '📊'} {type.display_name} ({getTypeCount(type.type_name)})
+                             type.category === 'database' ? '🗄️' : '📊'} {type.displayName} ({getTypeCount(type.typeName)})
                           </button>
                         </li>
                       )}
@@ -389,7 +389,7 @@ export function DataSourceManagementCenter(props: DataSourceManagementCenterProp
                 <button onClick={handleBackToMain}>← 返回</button>
                 <h2>数据预览: {selectedSource()?.name}</h2>
                 <div class="preview-info">
-                  共 {previewData()?.total_rows} 行数据，显示前 {previewData()?.rows.length} 行
+                  共 {(previewData() as any)?.totalCount ?? (previewData() as any)?.total_rows} 行数据，显示前 {previewData()?.rows.length} 行
                 </div>
               </div>
 
@@ -481,7 +481,7 @@ function DataSourceCard(props: DataSourceCardProps) {
   };
 
   const getDisplayType = (source: DataSourceInfo) => {
-    const raw = (source.type_name || source.provider_type || '').toLowerCase();
+    const raw = ((source as any).providerType || (source as any).provider_type || '').toLowerCase();
     if (raw.includes('database_mysql')) return 'MySQL';
     if (raw.includes('database_postgresql')) return 'PostgreSQL';
     if (raw === 'json') return 'JSON';
@@ -489,14 +489,14 @@ function DataSourceCard(props: DataSourceCardProps) {
     if (raw === 'excel') return 'Excel';
     if (raw.startsWith('api')) return 'API';
     if (raw.startsWith('database')) return 'Database';
-    return source.type_name || source.provider_type || 'Unknown';
+    return (source as any).providerType || (source as any).provider_type || 'Unknown';
   };
 
   return (
     <div class="data-source-card" data-active={props.active ? 'true' : 'false'}>
       <div class="card-header">
         <div class="card-title">
-          <span class="type-icon">{getTypeIcon(props.source.type_name || props.source.provider_type)}</span>
+          <span class="type-icon">{getTypeIcon(props.source.providerType)}</span>
           <h4>
             {props.source.name}
             <Show when={props.active}>
@@ -522,7 +522,7 @@ function DataSourceCard(props: DataSourceCardProps) {
         </div>
         <div class="meta-row">
           <span class="meta-label">最后更新:</span>
-          <span class="meta-value">{formatDate(props.source.last_updated)}</span>
+          <span class="meta-value">{formatDate(props.source.lastUpdated)}</span>
         </div>
       </div>
 

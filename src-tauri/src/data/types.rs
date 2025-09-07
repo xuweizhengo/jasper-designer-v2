@@ -109,6 +109,7 @@ pub enum AggregateFunction {
 
 /// 统一数据集格式
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DataSet {
     /// 列定义
     pub columns: Vec<DataColumn>,
@@ -435,6 +436,7 @@ pub struct WizardStep {
 
 /// 数据源类型信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DataSourceTypeInfo {
     pub type_name: String,
     pub display_name: String,
@@ -447,6 +449,7 @@ pub struct DataSourceTypeInfo {
 
 /// 数据源实例信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DataSourceInfo {
     pub id: String,
     pub name: String,

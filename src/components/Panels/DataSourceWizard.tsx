@@ -215,7 +215,7 @@ export function DataSourceWizard(props: DataSourceWizardProps) {
             success: true,
             message: '连接测试成功！数据格式正确。',
             preview: {
-              record_count: previewData.total_rows ?? previewData.total_count ?? 0,
+              record_count: (previewData as any).totalCount ?? (previewData as any).total_rows ?? (previewData as any).total_count ?? 0,
               fields: schema.columns.map(col => col.name),
               sample_data: previewData.rows
             }

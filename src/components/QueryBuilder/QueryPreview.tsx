@@ -151,7 +151,7 @@ export default function QueryPreview(props: QueryPreviewProps) {
           <h4>📊 查询结果预览</h4>
           <div class="result-stats">
             <span class="stat-item">
-              📋 {props.result.total_rows} 行数据
+              📋 {(props.result as any).totalCount ?? (props.result as any).total_rows} 行数据
             </span>
             <span class="stat-item">
               📊 {props.result.columns.length} 列
@@ -197,7 +197,7 @@ export default function QueryPreview(props: QueryPreviewProps) {
                 <strong>执行时间:</strong> {props.result.execution_time}ms
               </div>
               <div class="metadata-item">
-                <strong>返回行数:</strong> {props.result.total_rows}
+                <strong>返回行数:</strong> {(props.result as any).totalCount ?? (props.result as any).total_rows}
               </div>
               <div class="metadata-item">
                 <strong>列数量:</strong> {props.result.columns.length}

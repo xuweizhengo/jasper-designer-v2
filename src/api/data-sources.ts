@@ -5,21 +5,19 @@ import { invoke } from '@tauri-apps/api/tauri';
 export interface DataSourceInfo {
   id: string;
   name: string;
-  type_name: string;
-  provider_type: string;
+  providerType: string;
   status: 'active' | 'error' | 'disabled';
   config?: any;
   description?: string;
-  created_at: string;
-  updated_at?: string;
-  last_updated: string;
-  created_by?: string;
+  createdAt: string;
+  lastUpdated: string;
+  createdBy?: string;
   tags?: string[];
 }
 
 export interface DataSourceTypeInfo {
-  type_name: string;
-  display_name: string;
+  typeName: string;
+  displayName: string;
   description: string;
   category: 'file' | 'network' | 'database' | 'api';
   capabilities: string[];
@@ -100,10 +98,9 @@ export interface DataQuery {
 export interface DataSet {
   rows: any[];
   columns: any[];
-  total_count: number;
-  total_rows: number; // 确保这个字段不是可选的
+  totalCount: number;
   cached: boolean;
-  cache_time?: string;
+  cacheTime?: string;
   checksum?: string;
   metadata?: any;
 }
@@ -174,28 +171,27 @@ export class DataSourceAPI {
   }
 
   static async deleteDataSource(sourceId: string): Promise<void> {
-    // 兼容不同后端参数命名（source_id vs sourceId）
-    return invoke('delete_data_source', { source_id: sourceId, sourceId });
+    return invoke('delete_data_source', { sourceId });
   }
 
   static async updateConfig(sourceId: string, config: any): Promise<void> {
-    return invoke('update_data_source_config', { source_id: sourceId, config });
+    return invoke('update_data_source_config', { sourceId, config });
   }
 
   static async queryDataSource(sourceId: string, query: DataQuery): Promise<DataSet> {
-    return invoke('query_data_source', { source_id: sourceId, query });
+    return invoke('query_data_source', { sourceId, query });
   }
 
   static async getDataPreview(sourceId: string, limit?: number): Promise<DataSet> {
-    return invoke('get_data_preview', { source_id: sourceId, limit });
+    return invoke('get_data_preview', { sourceId, limit });
   }
 
   static async testConnection(providerType: string, config: any): Promise<boolean> {
-    return invoke('test_data_source_connection', { provider_type: providerType, config });
+    return invoke('test_data_source_connection', { providerType, config });
   }
 
   static async discoverSchema(providerType: string, config: any): Promise<DataSchema> {
-    return invoke('discover_schema', { provider_type: providerType, config });
+    return invoke('discover_schema', { providerType, config });
   }
 
   // 数据库特定操作
@@ -226,11 +222,7 @@ export class DataSourceAPI {
     
     // 尝试使用正确的参数名调用
     try {
-      // 临时修复：直接使用当前运行版本期望的参数名
-      const params = {
-        "sql": sql,
-        "databaseType": databaseType  // 使用运行版本期望的键名
-      };
+      const params = { sql, databaseType };
       console.log('🔍 将传递给Rust的参数:', params);
       console.log('🔍 参数对象的键:', Object.keys(params));
       console.log('🔍 参数JSON:', JSON.stringify(params));
@@ -239,23 +231,12 @@ export class DataSourceAPI {
     } catch (error) {
       console.error('❌ 调用失败:', error);
       
-      // 如果失败，尝试使用标准的参数名
-      console.log('🔄 尝试使用database_type键名...');
-      try {
-        const fallbackParams = {
-          "sql": sql,
-          "database_type": databaseType
-        };
-        return await invoke('validate_sql_syntax', fallbackParams);
-      } catch (fallbackError) {
-        console.error('❌ 容错调用也失败:', fallbackError);
-        throw fallbackError;
-      }
+      throw error;
     }
   }
 
   static async formatSql(sql: string, databaseType: string): Promise<string> {
-    return invoke('format_sql', { sql, databaseType: databaseType });
+    return invoke('format_sql', { sql, databaseType });
   }
 
   // 数据源创建和保存
@@ -280,14 +261,14 @@ export class DataSourceAPI {
       const dataSourceId = await invoke('create_database_source', {
         name: request.name,
         description: request.description || null,
-        databaseType: config.database_type,  // camelCase 格式，Tauri 自动转换
+        databaseType: config.database_type,
         host: config.host,
         port: config.port,
         database: config.database,
         username: config.username,
         password: config.password || null,
         sql: request.sql,
-        selectedTables: selectedTables,  // 使用确保不为 undefined 的值
+        selectedTables: selectedTables,
         tags: request.tags ? request.tags : null,
       });
 
@@ -311,7 +292,7 @@ export class DataSourceAPI {
 
   // 兼容性方法
   static async createDataSource(name: string, type: string, config: any): Promise<string> {
-    return invoke('create_data_source', { name, provider_type: type, config });
+    return invoke('create_data_source', { name, providerType: type, config });
   }
 
   static async getPreview(sourceId: string, _path?: string, limit?: number): Promise<DataSet> {
@@ -323,7 +304,7 @@ export class DataSourceAPI {
   }
 
   static async evaluateExpression(sourceId: string, expression: string, context?: any): Promise<any> {
-    return invoke('evaluate_expression', { source_id: sourceId, expression, context });
+    return invoke('evaluate_expression', { sourceId, expression, context });
   }
 
   static async getAvailableTypes(): Promise<DataSourceTypeInfo[]> {
@@ -331,19 +312,19 @@ export class DataSourceAPI {
   }
 
   static async getSchema(sourceId: string): Promise<DataSchema> {
-    return invoke('get_data_source_schema', { source_id: sourceId });
+    return invoke('get_data_source_schema', { sourceId });
   }
 
   static async getConfigSchema(providerType: string): Promise<any> {
-    return invoke('get_config_schema', { provider_type: providerType });
+    return invoke('get_config_schema', { providerType });
   }
 
   static async getDefaultConfig(providerType: string): Promise<any> {
-    return invoke('get_default_config', { provider_type: providerType });
+    return invoke('get_default_config', { providerType });
   }
 
   static async validateConfig(providerType: string, config: any): Promise<any> {
-    return invoke('validate_config', { provider_type: providerType, config });
+    return invoke('validate_config', { providerType, config });
   }
 
   static async captureDataPreview(config: any, sql: string): Promise<any> {
