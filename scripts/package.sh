@@ -1,6 +1,25 @@
 #!/bin/bash
 # === Jasper Designer V2 打包工具集 ===
-# 统一入口脚本，提供交互式选择
+# 统一入口脚本，提供交互式选择或无交互参数化构建
+
+set -Eeuo pipefail
+
+# -------- Helpers --------
+req() { command -v "$1" >/dev/null 2>&1 || { echo -e "\033[0;31m✖ 缺少依赖: $1\033[0m"; exit 1; }; }
+die() { echo -e "\033[0;31m✖ $*\033[0m"; exit 1; }
+
+# 预检（可通过 PRECHECK=0 跳过）
+precheck() {
+  [[ "${PRECHECK:-1}" == "0" ]] && return 0
+  echo_info "运行预检… (可通过 PRECHECK=0 跳过)"
+  echo_info "Node: $(node -v 2>/dev/null || echo '未安装') | NPM: $(npm -v 2>/dev/null || echo '未安装') | Cargo: $(cargo --version 2>/dev/null || echo '未安装')"
+  req node; req npm; req cargo
+  if npm run -s lint >/dev/null 2>&1; then
+    echo_success "ESLint 通过"
+  else
+    echo_warning "ESLint 检查未通过或未安装，继续构建但建议先修复 (npm i && npm run lint)"
+  fi
+}
 
 # 获取项目根目录的绝对路径
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,6 +44,54 @@ echo_title "======================================"
 echo_title "   Jasper Designer V2 打包工具"
 echo_title "======================================"
 echo ""
+
+# 参数解析（优先无交互）
+ACTION=""; FEATURE_NAME=""; BASE_PACKAGE=""; CLEAN_FLAG="";
+while [[ ${1:-} ]]; do
+  case "$1" in
+    full) ACTION="full" ;;
+    smart|incremental) ACTION="smart" ;;
+    list) ACTION="list" ;;
+    clean) ACTION="clean" ;;
+    --feature) FEATURE_NAME="${2:-}"; shift ;;
+    --base) BASE_PACKAGE="${2:-}"; shift ;;
+    --clean-history) CLEAN_FLAG="--clean-history" ;;
+    -y|--yes) export YES_ALL=1 ;;
+    *) echo_warning "未知参数: $1" ;;
+  esac
+  shift || true
+done
+
+# 预检
+precheck
+
+# 快速子命令模式
+if [[ -n "$ACTION" ]]; then
+  case "$ACTION" in
+    full)
+      FEATURE_NAME=${FEATURE_NAME:-"FULL-BUILD"}
+      [[ -n "${CLEAN_FLAG}" ]] && echo_info "启用清理历史版本"
+      [[ ! -x "$SCRIPT_DIR/package-full-optimized.sh" ]] && die "缺少脚本: package-full-optimized.sh"
+      "$SCRIPT_DIR/package-full-optimized.sh" "$FEATURE_NAME" "$CLEAN_FLAG"
+      echo_success "全量打包完成"
+      exit 0
+      ;;
+    smart)
+      FEATURE_NAME=${FEATURE_NAME:-"UI-UPDATE"}
+      [[ ! -d "$BUILD_DIR" ]] && die "未找到构建目录: $BUILD_DIR，请先执行全量打包"
+      [[ ! -x "$SCRIPT_DIR/package-smart.sh" ]] && die "缺少脚本: package-smart.sh"
+      "$SCRIPT_DIR/package-smart.sh" "$FEATURE_NAME" "$BASE_PACKAGE"
+      echo_success "增量打包完成"
+      exit 0
+      ;;
+    list)
+      ACTION_MENU=3; # 复用下方逻辑
+      ;;
+    clean)
+      ACTION_MENU=4
+      ;;
+  esac
+fi
 
 # 检查脚本文件权限
 chmod +x scripts/package-full.sh 2>/dev/null || true
@@ -57,7 +124,7 @@ read -p "请输入选项 (1-4, q): " -n 1 -r
 echo ""
 echo ""
 
-case $REPLY in
+case ${ACTION_MENU:-$REPLY} in
     1)
         echo_title "选择了全量打包"
         echo ""
@@ -76,6 +143,7 @@ case $REPLY in
         fi
         
         echo_info "开始优化全量打包..."
+        [[ ! -x "$SCRIPT_DIR/package-full-optimized.sh" ]] && die "缺少脚本: package-full-optimized.sh"
         "$SCRIPT_DIR/package-full-optimized.sh" "$FEATURE_NAME" "$CLEAN_FLAG"
         ;;
         
@@ -102,6 +170,7 @@ case $REPLY in
         read -p "指定基础包名称 (留空自动选择最新): " BASE_PACKAGE
         
         echo_info "开始智能增量打包..."
+        [[ ! -x "$SCRIPT_DIR/package-smart.sh" ]] && die "缺少脚本: package-smart.sh"
         "$SCRIPT_DIR/package-smart.sh" "$FEATURE_NAME" "$BASE_PACKAGE"
         ;;
         
@@ -122,7 +191,7 @@ case $REPLY in
             # 显示磁盘使用情况
             echo ""
             echo "💾 磁盘使用情况:"
-            du -sh "$BUILD_DIR"/* 2>/dev/null | sort -hr | head -10
+            du -sh "$BUILD_DIR"/* 2>/dev/null | sort -hr | head -10 || true
         else
             echo_warning "未找到任何版本包"
         fi
@@ -162,7 +231,7 @@ case $REPLY in
                 ls -1t "$BUILD_DIR" | grep "^jasper-designer-v2-.*\.tar\.gz$" | tail -n +4
                 echo ""
                 
-                read -p "确认清理? (y/n): " -n 1 -r
+                if [[ -n "${YES_ALL:-}" ]]; then REPLY="y"; else read -p "确认清理? (y/n): " -n 1 -r; fi
                 echo ""
                 
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
