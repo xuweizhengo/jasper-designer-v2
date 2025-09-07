@@ -22,7 +22,7 @@ pub async fn get_available_data_source_types(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct CreateSourceReq {
+pub struct CreateSourceReq {
     name: String,
     provider_type: String,
     config: Value,
@@ -45,7 +45,7 @@ pub async fn create_data_source(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ProviderConfigReq { provider_type: String, config: Value }
+pub struct ProviderConfigReq { provider_type: String, config: Value }
 
 /// 测试数据源连接
 #[tauri::command]
@@ -71,7 +71,7 @@ pub async fn list_data_sources(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct IdReq { source_id: String }
+pub struct IdReq { source_id: String }
 
 /// 删除数据源
 #[tauri::command]
@@ -86,7 +86,7 @@ pub async fn delete_data_source(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct UpdateConfigReq { source_id: String, config: Value }
+pub struct UpdateConfigReq { source_id: String, config: Value }
 
 /// 更新数据源配置
 #[tauri::command]
@@ -104,7 +104,7 @@ pub async fn update_data_source_config(
 /// 查询数据 (通用接口)
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct QueryReq { source_id: String, query: Option<DataQuery> }
+pub struct QueryReq { source_id: String, query: Option<DataQuery> }
 
 #[tauri::command]
 pub async fn query_data_source(
@@ -119,7 +119,7 @@ pub async fn query_data_source(
 /// 获取数据预览 (限制行数)
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct PreviewReq { source_id: String, path: Option<String>, limit: Option<usize> }
+pub struct PreviewReq { source_id: String, path: Option<String>, limit: Option<usize> }
 
 #[tauri::command]
 pub async fn get_data_preview(
@@ -144,7 +144,7 @@ pub async fn get_data_preview(
 /// 求值表达式
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct EvalReq { source_id: String, expression: String, context: Option<Value> }
+pub struct EvalReq { source_id: String, expression: String, context: Option<Value> }
 
 #[tauri::command]
 pub async fn evaluate_expression(
@@ -171,7 +171,7 @@ pub async fn evaluate_expression(
 /// 批量表达式求值
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct EvalBatchReq { source_id: String, expressions: Vec<String>, context: Option<Value> }
+pub struct EvalBatchReq { source_id: String, expressions: Vec<String>, context: Option<Value> }
 
 #[tauri::command]
 pub async fn evaluate_expressions_batch(
@@ -217,7 +217,7 @@ pub async fn evaluate_expressions_batch(
 /// 搜索数据
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct SearchReq { source_id: String, search_term: String, fields: Option<Vec<String>>, limit: Option<usize> }
+pub struct SearchReq { source_id: String, search_term: String, fields: Option<Vec<String>>, limit: Option<usize> }
 
 #[tauri::command]
 pub async fn search_data(
@@ -280,11 +280,11 @@ pub async fn refresh_data_source_schema(
 /// 发现Schema (自动推断)
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ProviderReq { provider_type: String }
+pub struct ProviderReq { provider_type: String }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ProviderConfigOnlyReq { provider_type: String, config: Value }
+pub struct ProviderConfigOnlyReq { provider_type: String, config: Value }
 
 #[tauri::command]
 pub async fn discover_schema(
@@ -428,7 +428,7 @@ pub async fn discover_database_schema(config: serde_json::Value) -> Result<DataS
 /// 创建数据库数据源 - 重构版本
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct CreateDbSourceReq {
+pub struct CreateDbSourceReq {
     name: String,
     description: Option<String>,
     database_type: String,
@@ -496,7 +496,7 @@ pub async fn create_database_source(
 /// 格式化SQL (基础实现)
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct FormatSqlReq { sql: String, database_type: String }
+pub struct FormatSqlReq { sql: String, database_type: String }
 
 #[tauri::command]
 pub async fn format_sql(req: FormatSqlReq) -> Result<String, String> {
@@ -515,7 +515,7 @@ pub async fn format_sql(req: FormatSqlReq) -> Result<String, String> {
 /// 验证SQL语法
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ValidateSqlReq { sql: String, database_type: String }
+pub struct ValidateSqlReq { sql: String, database_type: String }
 
 #[tauri::command]
 pub async fn validate_sql_syntax(req: ValidateSqlReq) -> Result<ValidationResult, String> {
@@ -612,7 +612,7 @@ pub async fn validate_sql_syntax(req: ValidateSqlReq) -> Result<ValidationResult
 /// 执行数据库查询预览
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ExecutePreviewReq { config: serde_json::Value, sql: String, limit: Option<u32> }
+pub struct ExecutePreviewReq { config: serde_json::Value, sql: String, limit: Option<u32> }
 
 #[tauri::command]
 pub async fn execute_database_preview(req: ExecutePreviewReq) -> Result<QueryResult, String> {
@@ -711,7 +711,7 @@ pub async fn explain_query(config: serde_json::Value, sql: String) -> Result<ser
 /// 获取表数据样本
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct TableSampleReq { config: serde_json::Value, table_name: String, limit: Option<u32> }
+pub struct TableSampleReq { config: serde_json::Value, table_name: String, limit: Option<u32> }
 
 #[tauri::command]
 pub async fn get_table_sample(req: TableSampleReq) -> Result<QueryResult, String> {

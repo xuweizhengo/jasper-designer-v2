@@ -10,30 +10,27 @@
 ```
 提供交互式菜单，包含所有打包选项。
 
-### 直接命令行使用
+### 直接命令行使用（无交互参数）
 
-#### 全量打包
+#### 全量打包（Tauri CLI 优先）
 ```bash
-# 基础全量打包
-./scripts/package-full.sh
+# 统一入口（推荐）
+./scripts/package.sh full --feature RELEASE-2.1 [--clean-history]
 
-# 指定功能名称
-./scripts/package-full.sh "DATA-SOURCE-FEATURE"
+# 深度清理（dist + src-tauri/target + vite 缓存 + 重新安装依赖）
+DEEP_CLEAN=1 ./scripts/package.sh full --feature TRY-CLEAN
 
-# 全量打包 + 清理历史版本
-./scripts/package-full.sh "RELEASE-V2.1" --clean-history
+# 兼容旧脚本
+./scripts/package-full.sh "DATA-SOURCE-FEATURE" [--clean-history]
 ```
 
-#### 增量打包
+#### 增量打包（智能检测 + 可复用基础包）
 ```bash
-# 基础增量打包（自动选择最新基础包）
-./scripts/package-incremental.sh
+# 统一入口（推荐）
+./scripts/package.sh smart --feature UI-UPDATE [--base jasper-designer-v2-YYYYmmdd-HHMMSS]
 
-# 指定功能名称
-./scripts/package-incremental.sh "UI-FIXES"
-
-# 指定基础包
-./scripts/package-incremental.sh "HOTFIX" "jasper-designer-v2-STABLE-20250823-120000"
+# 兼容旧脚本
+./scripts/package-incremental.sh "UI-FIXES" ["jasper-designer-v2-YYYYmmdd-HHMMSS"]
 ```
 
 ## 📋 打包策略指南
@@ -70,6 +67,7 @@
 - 🎨 **交互式界面** - 彩色菜单，用户友好
 - 📊 **版本管理** - 查看、清理历史版本
 - 💾 **磁盘监控** - 显示存储使用情况
+- 🧪 **预检** - Node/NPM/Cargo/ESLint 状态摘要（可通过 `PRECHECK=0` 跳过）
 
 ## 📁 目录结构
 
@@ -83,13 +81,15 @@ builds/windows/
     └── ...
 ```
 
-## 📋 包信息文件
+## 📋 包信息与产物
 
-每个包都包含详细信息：
+每个包都包含构建信息：
 
-- **PACKAGE_INFO.md** - 全量包信息
-- **INCREMENTAL_INFO.md** - 增量包信息
-- 构建时间、模块检测、使用说明等
+- **PACKAGE_INFO.md** - 构建摘要（包名/功能/时间/分支/提交/清理级别/基础包/大小/SHA256）
+- **OPTIMIZATION-NOTES.md** - 全量构建优化说明（如有）
+- 产物：目录包 + 压缩包（.tar.gz）
+
+> 注：新版 `package-full-optimized.sh` 与 `package-smart.sh` 会自动生成 PACKAGE_INFO.md
 
 ## ⚠️ 注意事项
 
@@ -137,3 +137,39 @@ builds/windows/
 ---
 
 **现在你可以一键完成所有打包操作，脚本会智能处理模块检测、版本管理、缓存清理等所有细节！**
+
+---
+
+## ❓ 常见问题（FAQ）
+
+### 1) 构建时报错：`The distDir configuration is set to "../dist" but this path doesn't exist`
+- 原因：直接 `cargo build` 时 `dist/` 未生成，`tauri::generate_context!` 编译期校验失败。
+- 解决：
+  - 使用 `scripts/package.sh full` 或 `npm run tauri build`（会先 `npm run build`）
+  - 或先 `npm run build` 再 `cargo build --manifest-path src-tauri/Cargo.toml --release`
+
+### 2) 输出提示：`未检测到 Tauri CLI，回退到 cargo build`
+- 原因：本地没有 `node_modules/.bin/tauri`，且 `npx` 无法联网拉取。
+- 解决：
+  - `npm ci` 安装依赖，或用 `DEEP_CLEAN=1 ./scripts/package.sh full` 让脚本自动安装
+  - 无法安装时，脚本会先 `npm run build` 再 `cargo build`，以保证 `dist/` 存在
+
+### 3) 需要清理哪些缓存？
+- 级别 A（默认）：清理 `dist/`
+- 级别 B：A + 清理 `src-tauri/target/`（Rust/依赖变更）
+- 级别 C：B + 清理 `node_modules/.vite` + `npm ci`（`--deep-clean` 或 `DEEP_CLEAN=1`）
+
+### 4) 打包结果在哪里？
+- 输出目录：`builds/windows/jasper-designer-v2-<FEATURE>-<YYYYmmdd-HHMMSS>/`
+- 归档目录：`builds/windows/archives/`
+- 完整信息见 `PACKAGE_INFO.md`
+
+### 5) 如何在 CI 中使用？
+```bash
+PRECHECK=0 ./scripts/package.sh full --feature CI-BUILD --clean-history
+```
+或：
+```bash
+npm ci
+DEEP_CLEAN=1 ./scripts/package.sh full --feature CI-BUILD
+```
