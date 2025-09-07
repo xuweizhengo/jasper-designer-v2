@@ -29,3 +29,19 @@
 ## Security & Configuration Tips
 - Tauri config lives in `src-tauri/tauri.conf.json`; avoid introducing network access by default. For Windows packaging and safe execution notes, see `scripts/` and generated notices.
 
+## API Contracts & Naming (Must‑Follow)
+- Transport (JSON) uses camelCase; Rust structs stay snake_case with `#[serde(rename_all = "camelCase", deny_unknown_fields)]` on all request/response DTOs.
+- Every Tauri command accepts a single DTO (request object). Do not add multi‑scalar params.
+- Responses also use DTOs with `rename_all = "camelCase"` so TS receives camelCase fields (e.g., `providerType`, `createdAt`, `lastUpdated`, `totalCount`).
+- Do not add alias keys for compatibility. If schema changes, migrate callers and data files explicitly.
+
+## Invocation Rule (No Bare `invoke`)
+- Only the API layer may import `@tauri-apps/api/tauri`:
+  - Allowed: files under `src/api/**`.
+  - Forbidden: any other file. Use the exported functions from `src/api/**` instead.
+- Lint enforces this with ESLint `no-restricted-imports` and per‑folder overrides.
+
+## Change Checklist (PRs touching commands/DTOs)
+- Update Rust DTOs with `serde` attributes and add/adjust unit tests for (de)serialization.
+- Regenerate or update TS types (if using a generator later), and update `src/api/**` signatures.
+- Run `npm run lint` and ensure no restricted imports; run `npm run build` and `cargo check`.
