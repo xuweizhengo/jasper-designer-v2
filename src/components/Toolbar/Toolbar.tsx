@@ -1,10 +1,79 @@
 import { Component, createSignal, Show } from 'solid-js';
 import { useAppContext } from '../../stores/AppContext';
+import { PreviewModeToggle } from '../../stores/PreviewModeContext';
 import { invoke } from '@tauri-apps/api/tauri';
+import { open, save } from '@tauri-apps/api/dialog';
+import { TemplateAPI } from '../../api/template';
+import { AppStateConverter } from '../../utils/template-conversion';
+import '../../stores/PreviewModeContext.css';
 
-const Toolbar: Component = () => {
-  const { state, undo, redo, updateCanvasConfig } = useAppContext();
+interface ToolbarProps {
+  onOpenDataSources: () => void;
+}
+
+const Toolbar: Component<ToolbarProps> = (props) => {
+  const { state, undo, redo, updateCanvasConfig, setState } = useAppContext();
   const [zoomValue, setZoomValue] = createSignal(state.canvas_config.zoom * 100);
+
+  // Template operations
+  const handleNewTemplate = async () => {
+    try {
+      const newTemplate = await TemplateAPI.createEmptyTemplate();
+      const newAppState = AppStateConverter.toAppState(newTemplate);
+      setState(newAppState);
+      console.log('✅ 新建模板成功');
+    } catch (error) {
+      console.error('❌ 新建模板失败:', error);
+      alert('新建模板失败');
+    }
+  };
+
+  const handleOpenTemplate = async () => {
+    try {
+      const filePath = await open({
+        title: '打开模板文件',
+        filters: [{
+          name: 'Jasper模板',
+          extensions: ['jasper', 'jbin', 'jrxml']
+        }],
+        multiple: false
+      });
+
+      if (filePath && typeof filePath === 'string') {
+        const template = await TemplateAPI.loadTemplate(filePath);
+        const appState = AppStateConverter.toAppState(template);
+        setState({ ...appState, template_name: template.metadata.description || '未命名模板' });
+        console.log('✅ 模板加载成功:', filePath);
+      }
+    } catch (error) {
+      console.error('❌ 加载模板失败:', error);
+      alert('加载模板失败');
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    try {
+      const filePath = await save({
+        title: '保存模板文件',
+        filters: [{
+          name: 'Jasper模板',
+          extensions: ['jasper']
+        }],
+        defaultPath: state.template_name || '未命名模板'
+      });
+
+      if (filePath) {
+        const template = AppStateConverter.toJasperTemplate(state, {
+          description: state.template_name || '未命名模板'
+        });
+        await TemplateAPI.saveTemplate(template, filePath);
+        console.log('✅ 模板保存成功:', filePath);
+      }
+    } catch (error) {
+      console.error('❌ 保存模板失败:', error);
+      alert('保存模板失败');
+    }
+  };
 
   const handleZoomChange = async (newZoom: number) => {
     const zoom = newZoom / 100;
@@ -60,21 +129,33 @@ const Toolbar: Component = () => {
     <div class="h-12 bg-primary border-b border-default flex items-center justify-between px-4">
       {/* Left Section - File Operations */}
       <div class="flex items-center gap-2">
-        <button class="toolbar-btn" title="新建 (Ctrl+N)">
+        <button 
+          class="toolbar-btn" 
+          onClick={handleNewTemplate}
+          title="新建模板 (Ctrl+N)"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <span>新建</span>
         </button>
         
-        <button class="toolbar-btn" title="打开 (Ctrl+O)">
+        <button 
+          class="toolbar-btn" 
+          onClick={handleOpenTemplate}
+          title="打开模板 (Ctrl+O)"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
           <span>打开</span>
         </button>
         
-        <button class="toolbar-btn" title="保存 (Ctrl+S)">
+        <button 
+          class="toolbar-btn" 
+          onClick={handleSaveTemplate}
+          title="保存模板 (Ctrl+S)"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
@@ -83,12 +164,37 @@ const Toolbar: Component = () => {
 
         <div class="w-px h-6 bg-border-default mx-2" />
 
-        <button class="toolbar-btn" title="预览">
+        {/* 预览模式切换 */}
+        <PreviewModeToggle />
+
+        <button 
+          class="toolbar-btn" 
+          onClick={() => {
+            console.log('🔄 数据源按钮被点击！');
+            props.onOpenDataSources();
+          }} 
+          title="数据源管理"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
           </svg>
-          <span>预览</span>
+          <span>数据源</span>
+        </button>
+
+
+        {/* 输出预览按钮 - 预留功能 */}
+        <button 
+          class="toolbar-btn opacity-50 cursor-not-allowed"
+          disabled={true}
+          onClick={() => {
+            alert('📄 输出预览即将推出！\n\n✨ 即将支持的功能：\n• PDF格式预览\n• 打印效果预览\n• 分页显示\n• 导出设置');
+          }}
+          title="输出预览 - 即将推出 (PDF/打印预览功能)"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>输出预览</span>
         </button>
       </div>
 

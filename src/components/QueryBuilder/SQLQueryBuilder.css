@@ -1,0 +1,427 @@
+/* === SQL查询构建器样式 === */
+
+.sql-query-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  min-height: 600px;
+}
+
+/* 模式选择器 */
+.query-mode-selector {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  background: #f8f9fa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.3s ease;
+  color: #495057;
+}
+
+.mode-tab:hover:not(:disabled) {
+  border-color: #adb5bd;
+  background: #e9ecef;
+}
+
+.mode-tab.active {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.mode-tab:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mode-description {
+  font-size: 14px;
+  color: #6c757d;
+  text-align: center;
+  font-style: italic;
+}
+
+/* 错误消息 */
+.error-message {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #721c24;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+/* 查询内容区域 */
+.query-content {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 查询预览区域 */
+.query-preview-section {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.preview-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.format-btn:hover:not(:disabled) {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.validate-btn:hover:not(:disabled) {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+.execute-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* SQL显示区域 */
+.sql-display {
+  padding: 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.sql-code {
+  background: #2c3e50;
+  color: #ecf0f1;
+  border-radius: 6px;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+  border: 1px solid #34495e;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.sql-code code {
+  color: inherit;
+  background: none;
+}
+
+/* 验证结果 */
+.validation-result {
+  margin: 16px;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid;
+}
+
+.validation-result.valid {
+  background: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.validation-result.invalid {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.validation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.validation-status {
+  font-size: 14px;
+}
+
+.security-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.validation-errors, 
+.validation-warnings, 
+.validation-suggestions {
+  margin-top: 8px;
+}
+
+.validation-errors ul,
+.validation-warnings ul,
+.validation-suggestions ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+
+.validation-errors li,
+.validation-warnings li,
+.validation-suggestions li {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+/* 帮助区域 */
+.query-help {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.query-help details {
+  padding: 16px;
+}
+
+.query-help summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+  outline: none;
+}
+
+.query-help summary:hover {
+  color: #007bff;
+}
+
+.help-content {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.help-section h5 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.help-section ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #495057;
+}
+
+.help-section li {
+  margin-bottom: 4px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sql-query-builder {
+    padding: 12px;
+    gap: 16px;
+  }
+  
+  .mode-tabs {
+    flex-direction: column;
+  }
+  
+  .preview-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .action-btn {
+    text-align: center;
+  }
+  
+  .help-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .sql-code {
+    font-size: 12px;
+    padding: 12px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.query-content,
+.query-preview-section,
+.validation-result {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 加载状态 */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 焦点和可访问性 */
+.mode-tab:focus,
+.action-btn:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .sql-query-builder {
+    border: 2px solid #000;
+  }
+  
+  .mode-tab {
+    border: 2px solid #000;
+  }
+  
+  .mode-tab.active {
+    background: #000;
+    color: #fff;
+  }
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .sql-query-builder {
+    background: #343a40;
+    color: #f8f9fa;
+  }
+  
+  .query-mode-selector,
+  .query-content,
+  .query-preview-section,
+  .query-help {
+    background: #495057;
+    border-color: #6c757d;
+  }
+  
+  .mode-tab {
+    background: #6c757d;
+    border-color: #adb5bd;
+    color: #f8f9fa;
+  }
+  
+  .mode-tab:hover:not(:disabled) {
+    background: #5a6268;
+  }
+  
+  .sql-display {
+    background: #343a40;
+  }
+  
+  .sql-code {
+    background: #212529;
+    color: #f8f9fa;
+    border-color: #495057;
+  }
+}

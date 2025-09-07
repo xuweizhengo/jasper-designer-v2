@@ -26,11 +26,38 @@ pub enum AppError {
     
     #[error("History operation failed: {message}")]
     HistoryError { message: String },
+    
+    #[error("Validation error: {message}")]
+    ValidationError { message: String },
+
+    #[error("Database error: {message}")]
+    DatabaseError { message: String },
+
+    #[error("Connection error: {message}")]
+    ConnectionError { message: String },
+
+    #[error("Query error: {message}")]  
+    QueryError { message: String },
+
+    #[error("Configuration error: {message}")]
+    ConfigError { message: String },
 }
+
+// Add JasperError as an alias for AppError for compatibility
+pub type JasperError = AppError;
 
 impl From<AppError> for String {
     fn from(error: AppError) -> Self {
         error.to_string()
+    }
+}
+
+// 添加sqlx错误转换
+impl From<sqlx::Error> for AppError {
+    fn from(error: sqlx::Error) -> Self {
+        AppError::DatabaseError {
+            message: error.to_string(),
+        }
     }
 }
 

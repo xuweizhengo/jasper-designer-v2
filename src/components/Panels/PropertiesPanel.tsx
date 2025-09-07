@@ -1,6 +1,9 @@
-import { Component, createMemo, Match, Show, Switch } from 'solid-js';
+import { Component, createMemo, Match, Show, Switch, createSignal, onMount, For } from 'solid-js';
 import { useAppContext } from '../../stores/AppContext';
 import type { ReportElement, TextAlign } from '../../types';
+import { DataSourceAPI, DataSourceInfo } from '../../api/data-sources';
+import ProfessionalTextPropertiesPanel from '../ProfessionalText/ProfessionalTextPropertiesPanel';
+import '../ProfessionalText/ProfessionalTextPropertiesPanel.css';
 
 const PropertiesPanel: Component = () => {
   const { state, updateElement } = useAppContext();
@@ -23,14 +26,14 @@ const PropertiesPanel: Component = () => {
   };
 
   return (
-    <div class="flex flex-col h-full">
+    <div class="flex flex-col h-auto">
       {/* Header */}
       <div class="p-4 border-b border-default">
         <h2 class="text-lg font-semibold text-primary">属性面板</h2>
       </div>
 
       {/* Content */}
-      <div class="flex-1 overflow-y-auto custom-scrollbar">
+      <div class="p-0">
         <Show 
           when={primaryElement()} 
           fallback={
@@ -152,13 +155,22 @@ const ElementProperties: Component<ElementPropertiesProps> = (props) => {
       <Switch>
         <Match when={props.element.content.type === 'Text' && props.element.content}>
           {(textContent) => (
-            <TextProperties 
-              content={textContent()} 
-              onUpdate={(updates) => {
-                console.log('Text content update:', updates);
-                props.onUpdate(props.element.id, 'content', updates);
-              }}
-            />
+            <div>
+              {/* 🎨 Phase 2.1: 专业排版系统集成 */}
+              <ProfessionalTextPropertiesPanel 
+                element={props.element}
+                onUpdate={props.onUpdate}
+              />
+              
+              {/* 传统文字属性 (保持向后兼容) */}
+              <TextProperties 
+                content={textContent()} 
+                onUpdate={(updates) => {
+                  console.log('Text content update:', updates);
+                  props.onUpdate(props.element.id, 'content', updates);
+                }}
+              />
+            </div>
           )}
         </Match>
 
@@ -200,13 +212,22 @@ const ElementProperties: Component<ElementPropertiesProps> = (props) => {
 
         <Match when={props.element.content.type === 'DataField' && props.element.content}>
           {(fieldContent) => (
-            <DataFieldProperties 
-              content={fieldContent()} 
-              onUpdate={(updates) => {
-                console.log('DataField content update:', updates);
-                props.onUpdate(props.element.id, 'content', updates);
-              }}
-            />
+            <div>
+              {/* 🎨 Phase 2.1: 专业排版系统集成 - DataField也支持样式 */}
+              <ProfessionalTextPropertiesPanel 
+                element={props.element}
+                onUpdate={props.onUpdate}
+              />
+              
+              {/* 传统数据字段属性 */}
+              <DataFieldProperties 
+                content={fieldContent()} 
+                onUpdate={(updates) => {
+                  console.log('DataField content update:', updates);
+                  props.onUpdate(props.element.id, 'content', updates);
+                }}
+              />
+            </div>
           )}
         </Match>
       </Switch>
@@ -720,24 +741,103 @@ const ImageProperties: Component<{ content: any; onUpdate: (updates: any) => voi
 };
 
 const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) => void }> = (props) => {
+  const [dataSources, setDataSources] = createSignal<DataSourceInfo[]>([]);
+  const [loadingDataSources, setLoadingDataSources] = createSignal(false);
+
+  // Load available data sources on mount
+  onMount(async () => {
+    try {
+      setLoadingDataSources(true);
+      const sources = await DataSourceAPI.listDataSources();
+      setDataSources(sources);
+    } catch (error) {
+      console.error('Failed to load data sources:', error);
+    } finally {
+      setLoadingDataSources(false);
+    }
+  });
+
+  const handleDataSourceChange = (dataSourceId: string) => {
+    props.onUpdate({ 
+      data_source_id: dataSourceId === '' ? undefined : dataSourceId 
+    });
+  };
+
+  const selectedDataSource = createMemo(() => {
+    if (!props.content.data_source_id) return null;
+    return dataSources().find(ds => ds.id === props.content.data_source_id);
+  });
+
   return (
     <div class="space-y-4">
-      <PropertyGroup title="数据字段" icon="🔗">
+      <PropertyGroup title="数据源配置" icon="🔗">
         <div class="space-y-2">
+          <PropertyField label="数据源">
+            <Show when={loadingDataSources()} fallback={
+              <select
+                class="property-select"
+                value={props.content.data_source_id || ''}
+                onChange={(e) => handleDataSourceChange(e.currentTarget.value)}
+              >
+                <option value="">选择数据源</option>
+                <For each={dataSources()}>
+                  {(dataSource) => (
+                    <option value={dataSource.id}>
+                      {dataSource.name} ({dataSource.provider_type})
+                    </option>
+                  )}
+                </For>
+              </select>
+            }>
+              <div class="property-loading">加载数据源...</div>
+            </Show>
+          </PropertyField>
+
+          <Show when={selectedDataSource()}>
+            <div class="data-source-info">
+              <div class="text-xs text-muted">
+                <div><span class="font-medium">状态:</span> <span class={
+                  selectedDataSource()!.status === 'active' ? 'text-green-600' : 
+                  selectedDataSource()!.status === 'error' ? 'text-red-600' : 'text-gray-600'
+                }>
+                  {selectedDataSource()!.status === 'active' ? '活跃' : 
+                   selectedDataSource()!.status === 'error' ? '错误' : '禁用'}
+                </span></div>
+                <div><span class="font-medium">类型:</span> {selectedDataSource()!.provider_type}</div>
+                <div><span class="font-medium">更新:</span> {new Date(selectedDataSource()!.last_updated).toLocaleString('zh-CN')}</div>
+              </div>
+            </div>
+          </Show>
+
           <PropertyField label="表达式">
             <input
               type="text"
               class="property-input"
-              value={props.content.expression}
-              onInput={(e) => props.onUpdate({ expression: e.target.value })}
-              placeholder="${fieldName}"
+              value={props.content.expression || ''}
+              onInput={(e) => props.onUpdate({ expression: e.currentTarget.value })}
+              placeholder="{name} 或 {user.email} 格式"
+              disabled={false}
+              title="使用 {fieldName} 语法引用数据字段，如 {name}, {price}, {user.email} 等"
             />
           </PropertyField>
+
+          <Show when={!props.content.expression || !props.content.expression.trim()}>
+            <div class="text-xs text-blue-600">
+              💡 提示: 使用 {`{fieldName}`} 语法，如 {`{name}`}, {`{price}`}, {`{user.email}`} 等
+            </div>
+          </Show>
+          
+          <Show when={props.content.expression && !props.content.data_source_id}>
+            <div class="text-xs text-orange-600">
+              ⚠️ 注意: 选择数据源后表达式才能在预览模式下求值
+            </div>
+          </Show>
+
           <PropertyField label="格式">
             <select
               class="property-select"
               value={props.content.format || 'default'}
-              onChange={(e) => props.onUpdate({ format: e.target.value === 'default' ? undefined : e.target.value })}
+              onChange={(e) => props.onUpdate({ format: e.currentTarget.value === 'default' ? undefined : e.currentTarget.value })}
             >
               <option value="default">默认</option>
               <option value="currency">货币</option>
@@ -759,7 +859,7 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
                 class="property-select"
                 value={props.content.style.font_family}
                 onChange={(e) => props.onUpdate({ 
-                  style: { ...props.content.style, font_family: e.target.value }
+                  style: { ...props.content.style, font_family: e.currentTarget.value }
                 })}
               >
                 <option value="SimSun">宋体</option>
@@ -793,7 +893,7 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
                 class="property-select"
                 value={props.content.style.font_weight}
                 onChange={(e) => props.onUpdate({ 
-                  style: { ...props.content.style, font_weight: e.target.value }
+                  style: { ...props.content.style, font_weight: e.currentTarget.value }
                 })}
               >
                 <option value="normal">正常</option>

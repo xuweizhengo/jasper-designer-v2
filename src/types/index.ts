@@ -66,7 +66,7 @@ export type ElementContent =
       end_cap?: LineCapType;
       opacity?: number;
     }
-  | { type: 'DataField'; expression: string; format?: string; style: TextStyle };
+  | { type: 'DataField'; expression: string; format?: string; style: TextStyle; data_source_id?: string };
 
 export interface ReportElement {
   readonly id: ElementId;

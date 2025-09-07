@@ -20,6 +20,21 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
 thiserror = "1.0"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+tracing = "0.1"
+
+# Database dependencies - 优化版本（默认只启用MySQL）
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "chrono", "uuid", "json"] }
+mysql = "24.0"
+
+# 可选数据库支持 - 按需启用
+# sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "postgres", "sqlite", "chrono", "uuid", "json"] }
+regex = "1.0"
+
+[dev-dependencies]
+tempfile = "3.0"
 
 [features]
 # by default Tauri runs in production mode

@@ -347,10 +347,17 @@ EOF
     # 获取包大小
     local PACKAGE_SIZE=$(du -sh "${PACKAGE_NAME}" | cut -f1)
     local ARCHIVE_SIZE=$(du -sh "${PACKAGE_NAME}.tar.gz" | cut -f1)
+    local ARCHIVE_PATH="$BUILD_DIR/${PACKAGE_NAME}.tar.gz"
     
-    log_success "包目录: ${PACKAGE_SIZE}"
-    log_success "压缩包: ${ARCHIVE_SIZE}"
-    log_success "发布包创建完成: ${PACKAGE_NAME}.tar.gz"
+    log_success "发布包创建完成！"
+    echo ""
+    echo "📦 最终产物:"
+    echo "  📁 目录包: ${PACKAGE_SIZE} - $BUILD_DIR/${PACKAGE_NAME}"
+    echo "  📦 压缩包: ${ARCHIVE_SIZE} - ${ARCHIVE_PATH}"
+    echo ""
+    echo "⬇️ 下载命令："
+    echo "  scp user@server:${ARCHIVE_PATH} ."
+    echo ""
     
     cd "$PROJECT_ROOT"
 }

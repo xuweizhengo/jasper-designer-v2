@@ -7,6 +7,7 @@ import type { AppState, CanvasConfig } from '../types';
 interface AppContextType {
   // State
   state: AppState;
+  setState: (newState: Partial<AppState>) => void;
   
   // Actions
   createElement: (type: string, position: { x: number; y: number }, size: { width: number; height: number }, data?: any) => Promise<string>;
@@ -394,6 +395,7 @@ export const AppProvider: ParentComponent = (props) => {
 
   const contextValue: AppContextType = {
     state,
+    setState,
     createElement,
     updateElement,
     batchUpdatePositions,

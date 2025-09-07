@@ -36,8 +36,8 @@ html, body {
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-canvas-bg: #ffffff;
-  --color-selection: #3b82f6;
-  --color-selection-bg: rgba(59, 130, 246, 0.1);
+  --color-selection: rgba(79, 70, 229, 1);
+  --color-selection-bg: rgba(79, 70, 229, 0.04);
   --color-grid: #e2e8f0;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -419,35 +419,45 @@ html, body {
   background-size: 10px 10px;
 }
 
-/* 文字元素专用选中效果 - 柔和背景+虚线边框 */
-.text-element-selected {
-  /* 移除生硬的stroke描边 */
-  stroke: none !important;
+/* 🎯 文字选中效果系统 - 简洁版本 */
+
+/* 🎯 文字渲染质量优化样式 */
+.text-content-unified,
+.datafield-content-unified {
+  /* 启用文字优化渲染 */
+  text-rendering: optimizeLegibility;
+  shape-rendering: geometricPrecision;
+  font-kerning: auto;
+  
+  /* 确保在缩放时保持清晰度 */
+  vector-effect: non-scaling-stroke;
 }
 
-.text-element-selected .text-selection-background {
-  fill: rgba(59, 130, 246, 0.08);
-  stroke: #3b82f6;
-  stroke-width: 1;
-  stroke-dasharray: 3,3;
-  rx: 2;
+.text-line-wrapped,
+.text-line-original,
+.datafield-line-wrapped {
+  /* 继承父级优化属性 */
+  text-rendering: inherit;
+  shape-rendering: inherit;
+  font-kerning: inherit;
+}
+
+/* 🎯 选中框样式 - 作为背景层指示选中状态 */
+.text-selection-unified {
+  fill: rgba(79, 70, 229, 0.08);           /* 轻微背景提示 */
+  stroke: rgba(79, 70, 229, 0.6);          /* 清晰的边框指示 */
+  stroke-width: 1;                         /* 细线条 */
+  stroke-dasharray: 3,2;                   /* 精细虚线 */
+  rx: 2;                                   /* 微圆角 */
   ry: 2;
-  /* 微妙外发光效果 */
-  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.2));
+  filter: none;                            /* 保持简洁 */
 }
 
-/* 通用元素选中效果 (保持原有) */
+/* 通用元素选中效果 (非文字元素使用) */
 .element-selected {
-  stroke: var(--color-selection) !important;
-  stroke-width: 2px !important;
-  stroke-dasharray: none !important;
-}
-
-/* 非文字元素使用原有选中效果 */
-.element-selected:not(.text-element-selected) {
-  stroke: var(--color-selection) !important;
-  stroke-width: 2px !important;
-  stroke-dasharray: none !important;
+  stroke: var(--color-selection);
+  stroke-width: 2px;
+  stroke-dasharray: none;
 }
 
 .selection-handle {
@@ -732,4 +742,77 @@ html, body {
   will-change: transform;
   transform: translateZ(0);
   contain: layout style paint;
+}
+
+/* === Data Source Properties Panel Styles === */
+.property-loading {
+  padding: 0.5rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.data-source-info {
+  padding: 0.75rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+}
+
+.data-source-info .text-xs {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.data-source-info .text-muted {
+  color: var(--color-text-secondary);
+}
+
+.data-source-info .font-medium {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.data-source-info .text-green-600 {
+  color: #059669;
+}
+
+.data-source-info .text-red-600 {
+  color: #dc2626;
+}
+
+.data-source-info .text-gray-600 {
+  color: #4b5563;
+}
+
+.data-source-info .text-amber-600 {
+  color: #d97706;
+}
+
+.data-source-info div {
+  margin-bottom: 0.25rem;
+}
+
+.data-source-info div:last-child {
+  margin-bottom: 0;
+}
+
+/* Enhancement for property inputs when disabled */
+.property-input:disabled {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Tooltip-like hint styling */
+.text-xs.text-amber-600 {
+  padding: 0.5rem;
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  margin-top: 0.5rem;
 }

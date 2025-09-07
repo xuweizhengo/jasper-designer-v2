@@ -1,6 +1,7 @@
 import { Component, createSignal, createMemo, onCleanup } from 'solid-js';
 import type { ReportElement } from '../../types';
 import { useAppContext } from '../../stores/AppContext';
+import { unifiedTextBoundaryCalculator } from '../../utils/text-boundary-calculator';
 
 interface ResizeHandlesProps {
   element: ReportElement;
@@ -30,28 +31,70 @@ const ResizeHandles: Component<ResizeHandlesProps> = (props) => {
   const [dragPreviewPosition, setDragPreviewPosition] = createSignal({ x: 0, y: 0 });
   const [hasChanges, setHasChanges] = createSignal(false);
 
-  // 计算8个控制点的位置和样式
+  /**
+   * 统一边界控制点计算 - 与ElementRenderer完全对齐
+   * 
+   * 核心改进：
+   * 1. 文字元素使用统一边界计算器获取真实边界
+   * 2. 其他元素继续使用原有边界
+   * 3. 确保控制点与选中框完全匹配
+   */
   const handles = createMemo((): ResizeHandle[] => {
-    const { position, size } = props.element;
+    const { position, size, content } = props.element;
     const handleSize = 8;
     const halfHandle = handleSize / 2;
     
-    // 使用绝对坐标计算手柄位置
-    const left = position.x;
-    const top = position.y;
-    const right = position.x + size.width;
-    const bottom = position.y + size.height;
-    const centerX = position.x + size.width / 2;
-    const centerY = position.y + size.height / 2;
+    // 🎯 关键逻辑: 根据元素类型获取实际边界
+    let actualBounds = {
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height
+    };
+    
+    // 文字类型元素使用统一边界计算
+    if ((content.type === 'Text' || content.type === 'DataField') && content.style) {
+      const textContent = content.type === 'Text' ? content.content : (content.expression || '[数据字段]');
+      const unifiedBounds = unifiedTextBoundaryCalculator.calculateUnifiedBounds(
+        textContent,
+        content.style,
+        size
+      );
+      
+      // 使用统一边界的容器尺寸，但保持元素的绝对定位
+      actualBounds = {
+        x: position.x + unifiedBounds.containerBounds.x,
+        y: position.y + unifiedBounds.containerBounds.y,
+        width: unifiedBounds.containerBounds.width,
+        height: unifiedBounds.containerBounds.height
+      };
+      
+      // 开发调试信息
+      if (process.env['NODE_ENV'] === 'development') {
+        console.log('🎯 ResizeHandles统一边界:', {
+          elementId: props.element.id,
+          originalBounds: { x: position.x, y: position.y, width: size.width, height: size.height },
+          unifiedBounds: actualBounds
+        });
+      }
+    }
+    
+    // 计算控制点位置 - 基于实际边界
+    const left = actualBounds.x;
+    const top = actualBounds.y;
+    const right = actualBounds.x + actualBounds.width;
+    const bottom = actualBounds.y + actualBounds.height;
+    const centerX = actualBounds.x + actualBounds.width / 2;
+    const centerY = actualBounds.y + actualBounds.height / 2;
     
     return [
-      // 四角
+      // 四角控制点
       { position: 'nw', cursor: 'nw-resize', x: left - halfHandle, y: top - halfHandle },
       { position: 'ne', cursor: 'ne-resize', x: right - halfHandle, y: top - halfHandle },
       { position: 'sw', cursor: 'sw-resize', x: left - halfHandle, y: bottom - halfHandle },
       { position: 'se', cursor: 'se-resize', x: right - halfHandle, y: bottom - halfHandle },
       
-      // 四边中点
+      // 四边中点控制点
       { position: 'n', cursor: 'n-resize', x: centerX - halfHandle, y: top - halfHandle },
       { position: 's', cursor: 's-resize', x: centerX - halfHandle, y: bottom - halfHandle },
       { position: 'w', cursor: 'w-resize', x: left - halfHandle, y: centerY - halfHandle },
