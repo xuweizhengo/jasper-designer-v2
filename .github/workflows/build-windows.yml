@@ -29,7 +29,14 @@ jobs:
       run: |
         npm cache clean --force
         npm install --legacy-peer-deps
-      
+
+    - name: Fix icon compatibility
+      shell: powershell
+      run: |
+        # 临时复制一个兼容的图标，避免构建失败
+        Copy-Item "src-tauri/icons/icon.png" "src-tauri/icons/icon.ico" -Force
+        Write-Host "Icon compatibility fix applied"
+
     - name: Build application
       run: npm run tauri build
       
