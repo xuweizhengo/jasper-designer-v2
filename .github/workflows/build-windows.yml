@@ -24,11 +24,42 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: x86_64-pc-windows-msvc
-        
+
+    # 缓存Cargo依赖
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    # 缓存编译的target目录
+    - name: Cache cargo target
+      uses: actions/cache@v3
+      with:
+        path: |
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-target-
+
+    # 缓存node_modules
+    - name: Cache node_modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          node_modules
+          ~/.npm
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+
     - name: Install dependencies
       run: |
-        npm cache clean --force
-        npm install --legacy-peer-deps
+        npm ci --prefer-offline --no-audit --no-fund || npm install --legacy-peer-deps
 
     - name: Generate compatible icons
       shell: powershell
@@ -77,6 +108,9 @@ jobs:
 
     - name: Build application
       run: npm run tauri build
+      env:
+        CARGO_INCREMENTAL: 1
+        RUST_LOG: info
       
     - name: Package build files
       shell: powershell

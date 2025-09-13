@@ -41,10 +41,12 @@ jobs:
           Write-Host "⚠️ sccache unavailable, using direct compilation"
         }
 
-    # 安装cargo-chef用于依赖缓存
+    # 安装cargo-chef用于依赖缓存（不使用sccache）
     - name: Install cargo-chef
       run: |
         cargo install cargo-chef --version 0.1.67
+      env:
+        RUSTC_WRAPPER: ""
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
@@ -81,17 +83,29 @@ jobs:
           ${{ runner.os }}-cargo-chef-${{ hashFiles('src-tauri/Cargo.toml', 'src-tauri/Cargo.lock') }}-
           ${{ runner.os }}-cargo-chef-
 
-    # 准备cargo-chef recipe
+    # 准备cargo-chef recipe（如果sccache失败则禁用）
     - name: Prepare cargo-chef recipe
       run: |
         cd src-tauri
-        cargo chef prepare --recipe-path recipe.json
+        if ("${{ steps.sccache.outcome }}" -eq "success") {
+          cargo chef prepare --recipe-path recipe.json
+        } else {
+          $env:RUSTC_WRAPPER = ""
+          cargo chef prepare --recipe-path recipe.json
+        }
+      shell: powershell
 
-    # 编译依赖（使用缓存）
+    # 编译依赖（使用缓存，如果sccache失败则禁用）
     - name: Cook dependencies
       run: |
         cd src-tauri
-        cargo chef cook --release --recipe-path recipe.json --target x86_64-pc-windows-msvc
+        if ("${{ steps.sccache.outcome }}" -eq "success") {
+          cargo chef cook --release --recipe-path recipe.json --target x86_64-pc-windows-msvc
+        } else {
+          $env:RUSTC_WRAPPER = ""
+          cargo chef cook --release --recipe-path recipe.json --target x86_64-pc-windows-msvc
+        }
+      shell: powershell
 
     # 缓存node_modules
     - name: Cache node_modules
@@ -151,10 +165,18 @@ jobs:
 
     # 构建应用（利用之前的缓存）
     - name: Build application
+      shell: powershell
       run: |
+        if ("${{ steps.sccache.outcome }}" -ne "success") {
+          $env:RUSTC_WRAPPER = ""
+          Write-Host "⚠️ Building without sccache"
+        } else {
+          Write-Host "✅ Building with sccache"
+        }
         npm run tauri build
       env:
         RUST_LOG: info
+        CARGO_INCREMENTAL: 1
 
     # 显示sccache统计（如果可用）
     - name: Show sccache stats
