@@ -9,6 +9,7 @@ import '../../stores/PreviewModeContext.css';
 
 interface ToolbarProps {
   onOpenDataSources: () => void;
+  onOpenExport?: () => void;
 }
 
 const Toolbar: Component<ToolbarProps> = (props) => {
@@ -182,19 +183,19 @@ const Toolbar: Component<ToolbarProps> = (props) => {
         </button>
 
 
-        {/* 输出预览按钮 - 预留功能 */}
-        <button 
-          class="toolbar-btn opacity-50 cursor-not-allowed"
-          disabled={true}
+        {/* 导出按钮 */}
+        <button
+          class="toolbar-btn"
           onClick={() => {
-            alert('📄 输出预览即将推出！\n\n✨ 即将支持的功能：\n• PDF格式预览\n• 打印效果预览\n• 分页显示\n• 导出设置');
+            console.log('📤 导出按钮被点击！');
+            props.onOpenExport?.();
           }}
-          title="输出预览 - 即将推出 (PDF/打印预览功能)"
+          title="导出 (PDF/PNG/Excel)"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <span>输出预览</span>
+          <span>导出</span>
         </button>
       </div>
 

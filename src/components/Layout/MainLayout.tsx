@@ -10,6 +10,7 @@ import PreviewRenderer from '../Preview/PreviewRenderer'; // 导入预览渲染�
 import { DataSourcesPanel } from '../Panels/DataSourcesPanel';
 import DataContextPanel from '../DataContext/DataContextPanel';
 import { DataSourceManagementCenter } from '../DataSourceManagement/DataSourceManagementCenter';
+import { ExportDialog } from '../Export/ExportDialog';
 
 // 内部布局组件，可以访问 PreviewContext
 const MainLayoutContent: Component = () => {
@@ -17,9 +18,12 @@ const MainLayoutContent: Component = () => {
   
   // Data source panel state management (保留旧面板作为快速访问)
   const [isDataSourcesOpen, setIsDataSourcesOpen] = createSignal(false);
-  
+
   // Data source management center state management
   const [isManagementCenterOpen, setIsManagementCenterOpen] = createSignal(false);
+
+  // Export dialog state
+  const [isExportDialogOpen, setIsExportDialogOpen] = createSignal(false);
   
   // 调试：监听状态变化
   console.log('🖥️  MainLayout渲染，当前模式:', previewState().mode);
@@ -36,11 +40,21 @@ const MainLayoutContent: Component = () => {
   const handleCloseDataSources = () => setIsDataSourcesOpen(false);
   const handleCloseManagementCenter = () => setIsManagementCenterOpen(false);
 
+  const handleOpenExport = () => {
+    console.log('📤 打开导出对话框');
+    setIsExportDialogOpen(true);
+  };
+
+  const handleCloseExport = () => {
+    setIsExportDialogOpen(false);
+  };
+
   return (
     <div class="h-full flex flex-col bg-secondary">
       {/* Top Toolbar */}
-      <Toolbar 
+      <Toolbar
         onOpenDataSources={handleOpenDataSources}
+        onOpenExport={handleOpenExport}
       />
       
       {/* Main Content Area - 根据模式切换 */}
@@ -118,9 +132,15 @@ const MainLayoutContent: Component = () => {
       />
       
       {/* Data Sources Panel - 保留旧版本作为快速访问 (当前未使用) */}
-      <DataSourcesPanel 
-        isOpen={isDataSourcesOpen()} 
-        onClose={handleCloseDataSources} 
+      <DataSourcesPanel
+        isOpen={isDataSourcesOpen()}
+        onClose={handleCloseDataSources}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        isOpen={isExportDialogOpen()}
+        onClose={handleCloseExport}
       />
     </div>
   );
