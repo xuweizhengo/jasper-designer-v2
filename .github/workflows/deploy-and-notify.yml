@@ -1,0 +1,117 @@
+name: Deploy and Notify
+
+on:
+  workflow_run:
+    workflows: ["Build Windows and Notify Server"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+    - name: Download artifacts from build
+      uses: actions/github-script@v7
+      with:
+        script: |
+          let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }},
+          });
+          let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+            return artifact.name.startsWith("jasper-designer-windows")
+          })[0];
+          if (matchArtifact) {
+            let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/build.zip`, Buffer.from(download.data));
+            console.log(`Downloaded ${matchArtifact.name}`);
+            core.setOutput('artifact_name', matchArtifact.name);
+          }
+
+    - name: Extract build package
+      run: |
+        unzip build.zip -d ./
+        ls -la
+
+    - name: Upload to server
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        source: "*.zip"
+        target: "/root/project/jasper/builds/github-actions/"
+
+    - name: Create notification on server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          # 获取最新的构建文件
+          cd /root/project/jasper/builds/github-actions/
+          LATEST_BUILD=$(ls -t jasper-designer-*.zip 2>/dev/null | head -1)
+
+          # 创建通知文件
+          cat > /root/NEW_GITHUB_BUILD_READY.txt << EOF
+          =====================================
+          🎉 GitHub Actions 构建完成！
+          =====================================
+          项目: Jasper Designer V2
+          构建时间: $(date '+%Y-%m-%d %H:%M:%S')
+          构建文件: $LATEST_BUILD
+          分支: ${{ github.event.workflow_run.head_branch }}
+          提交: ${{ github.event.workflow_run.head_sha }}
+
+          📦 下载命令:
+          scp root@43.160.200.239:/root/project/jasper/builds/github-actions/$LATEST_BUILD ./
+
+          ✅ 构建状态: 成功
+          =====================================
+          EOF
+
+          echo "Build deployed: $LATEST_BUILD"
+
+    - name: Send email notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        secure: true
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: ✅ Jasper Designer 构建成功 - ${{ github.event.workflow_run.head_branch }}
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+        body: |
+          构建成功完成！
+
+          📦 构建信息：
+          - 分支：${{ github.event.workflow_run.head_branch }}
+          - 提交：${{ github.event.workflow_run.head_sha }}
+          - 运行ID：${{ github.event.workflow_run.id }}
+          - 时间：${{ github.event.workflow_run.created_at }}
+
+          📥 下载地址：
+          服务器路径：/root/project/jasper/builds/github-actions/
+
+          下载命令：
+          scp root@43.160.200.239:/root/project/jasper/builds/github-actions/jasper-designer-*.zip ./
+
+          🔗 查看详情：
+          ${{ github.event.workflow_run.html_url }}
+
+          ---
+          自动构建系统
