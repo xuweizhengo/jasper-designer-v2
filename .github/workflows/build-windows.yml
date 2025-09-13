@@ -37,27 +37,33 @@ jobs:
         Add-Type -AssemblyName System.Drawing
         $bitmap = New-Object System.Drawing.Bitmap 256, 256
         $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+
+        # 填充背景色（蓝色）
         $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 64, 128, 255))
         $graphics.FillRectangle($brush, 0, 0, 256, 256)
+
+        # 绘制文字
         $font = New-Object System.Drawing.Font("Arial", 72, [System.Drawing.FontStyle]::Bold)
         $textBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $graphics.DrawString("J", $font, $textBrush, 85, 70)
 
-        # 保存为不同尺寸的PNG
+        # 保存为PNG
         $bitmap.Save("src-tauri/icons/icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
-        $bitmap32 = New-Object System.Drawing.Bitmap $bitmap, 32, 32
-        $bitmap32.Save("src-tauri/icons/32x32.png", [System.Drawing.Imaging.ImageFormat]::Png)
 
-        # 删除有问题的ICO文件
-        if (Test-Path "src-tauri/icons/icon.ico") {
-          Remove-Item "src-tauri/icons/icon.ico" -Force
-          Write-Host "Removed problematic icon.ico"
+        # 创建不同尺寸
+        $sizes = @(16, 32, 128, 256)
+        foreach ($size in $sizes) {
+          $resized = New-Object System.Drawing.Bitmap $bitmap, $size, $size
+          $resized.Save("src-tauri/icons/$($size)x$($size).png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $resized.Dispose()
         }
+
+        # 保存为ICO（使用256x256的版本）
+        $bitmap.Save("src-tauri/icons/icon.ico", [System.Drawing.Imaging.ImageFormat]::Icon)
 
         # 清理
         $graphics.Dispose()
         $bitmap.Dispose()
-        $bitmap32.Dispose()
 
         Write-Host "Generated temporary icons for build"
 
