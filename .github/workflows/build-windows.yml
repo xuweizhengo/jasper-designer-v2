@@ -30,12 +30,36 @@ jobs:
         npm cache clean --force
         npm install --legacy-peer-deps
 
-    - name: Fix icon compatibility
+    - name: Generate compatible icons
       shell: powershell
       run: |
-        # 临时复制一个兼容的图标，避免构建失败
-        Copy-Item "src-tauri/icons/icon.png" "src-tauri/icons/icon.ico" -Force
-        Write-Host "Icon compatibility fix applied"
+        # 创建一个简单的彩色PNG作为临时图标
+        Add-Type -AssemblyName System.Drawing
+        $bitmap = New-Object System.Drawing.Bitmap 256, 256
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 64, 128, 255))
+        $graphics.FillRectangle($brush, 0, 0, 256, 256)
+        $font = New-Object System.Drawing.Font("Arial", 72, [System.Drawing.FontStyle]::Bold)
+        $textBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+        $graphics.DrawString("J", $font, $textBrush, 85, 70)
+
+        # 保存为不同尺寸的PNG
+        $bitmap.Save("src-tauri/icons/icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bitmap32 = New-Object System.Drawing.Bitmap $bitmap, 32, 32
+        $bitmap32.Save("src-tauri/icons/32x32.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+        # 删除有问题的ICO文件
+        if (Test-Path "src-tauri/icons/icon.ico") {
+          Remove-Item "src-tauri/icons/icon.ico" -Force
+          Write-Host "Removed problematic icon.ico"
+        }
+
+        # 清理
+        $graphics.Dispose()
+        $bitmap.Dispose()
+        $bitmap32.Dispose()
+
+        Write-Host "Generated temporary icons for build"
 
     - name: Build application
       run: npm run tauri build
