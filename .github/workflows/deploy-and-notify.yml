@@ -2,7 +2,7 @@ name: Deploy and Notify
 
 on:
   workflow_run:
-    workflows: ["Build Windows and Notify Server"]
+    workflows: ["Build Windows and Notify Server", "Optimized Windows Build"]
     types:
       - completed
 

@@ -1,0 +1,230 @@
+name: Optimized Windows Build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    # 安装sccache用于Rust编译缓存
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.3
+
+    # 安装cargo-chef用于依赖缓存
+    - name: Install cargo-chef
+      run: |
+        cargo install cargo-chef --version 0.1.67
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-pc-windows-msvc
+
+    # 缓存Cargo依赖
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    # 缓存cargo-chef的recipe
+    - name: Cache chef recipe
+      uses: actions/cache@v3
+      with:
+        path: |
+          src-tauri/recipe.json
+        key: ${{ runner.os }}-chef-recipe-${{ hashFiles('src-tauri/Cargo.toml', 'src-tauri/Cargo.lock') }}
+
+    # 缓存编译的依赖
+    - name: Cache cargo chef cook
+      uses: actions/cache@v3
+      with:
+        path: |
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-chef-${{ hashFiles('src-tauri/Cargo.toml', 'src-tauri/Cargo.lock') }}-${{ hashFiles('src-tauri/recipe.json') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-chef-${{ hashFiles('src-tauri/Cargo.toml', 'src-tauri/Cargo.lock') }}-
+          ${{ runner.os }}-cargo-chef-
+
+    # 准备cargo-chef recipe
+    - name: Prepare cargo-chef recipe
+      run: |
+        cd src-tauri
+        cargo chef prepare --recipe-path recipe.json
+
+    # 编译依赖（使用缓存）
+    - name: Cook dependencies
+      run: |
+        cd src-tauri
+        cargo chef cook --release --recipe-path recipe.json --target x86_64-pc-windows-msvc
+
+    # 缓存node_modules
+    - name: Cache node_modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          node_modules
+          ~/.npm
+        key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-modules-
+
+    # 安装前端依赖
+    - name: Install dependencies
+      run: |
+        npm ci --prefer-offline --no-audit --no-fund || npm install --legacy-peer-deps
+
+    # 生成临时图标
+    - name: Generate compatible icons
+      shell: powershell
+      run: |
+        Write-Host "Generating standard ICO file..."
+
+        # 标准的32x32 ICO文件 (蓝色背景，白色J字母)
+        $icoBase64 = "AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAABMLAAATCwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wBEgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+        # 将base64转换为字节数组并保存为ICO文件
+        $icoBytes = [Convert]::FromBase64String($icoBase64)
+        [System.IO.File]::WriteAllBytes("src-tauri/icons/icon.ico", $icoBytes)
+
+        # 生成其他PNG文件
+        Add-Type -AssemblyName System.Drawing
+        $bitmap = New-Object System.Drawing.Bitmap 256, 256
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+
+        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 68, 128, 255))
+        $graphics.FillRectangle($brush, 0, 0, 256, 256)
+
+        $font = New-Object System.Drawing.Font("Arial", 72, [System.Drawing.FontStyle]::Bold)
+        $textBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+        $graphics.DrawString("J", $font, $textBrush, 85, 70)
+
+        $bitmap.Save("src-tauri/icons/icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+        $bitmap32 = New-Object System.Drawing.Bitmap $bitmap, 32, 32
+        $bitmap32.Save("src-tauri/icons/32x32.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bitmap32.Dispose()
+
+        $bitmap128 = New-Object System.Drawing.Bitmap $bitmap, 128, 128
+        $bitmap128.Save("src-tauri/icons/128x128.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bitmap128.Dispose()
+
+        $graphics.Dispose()
+        $bitmap.Dispose()
+
+        Write-Host "Icons generated successfully"
+
+    # 构建应用（利用之前的缓存）
+    - name: Build application
+      run: |
+        npm run tauri build
+      env:
+        RUST_LOG: info
+
+    # 显示sccache统计
+    - name: Show sccache stats
+      run: |
+        sccache --show-stats
+
+    # 打包构建文件
+    - name: Package build files
+      shell: powershell
+      run: |
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $packageName = "jasper-designer-v2-OPTIMIZED-$timestamp"
+        New-Item -ItemType Directory -Path $packageName -Force
+
+        # 复制构建文件
+        $sourcePaths = @(
+          "src-tauri/target/release/bundle/msi/*.msi",
+          "src-tauri/target/release/*.exe",
+          "src-tauri/target/release/*.dll"
+        )
+
+        foreach ($path in $sourcePaths) {
+          if (Test-Path $path) {
+            Copy-Item $path $packageName/ -Force -ErrorAction SilentlyContinue
+          }
+        }
+
+        # 复制前端资源
+        if (Test-Path "dist") {
+          Copy-Item "dist/*" $packageName/ -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        # 复制图标
+        if (Test-Path "src-tauri/icons") {
+          New-Item -ItemType Directory -Path "$packageName/icons" -Force
+          Copy-Item "src-tauri/icons/*" "$packageName/icons/" -Force -ErrorAction SilentlyContinue
+        }
+
+        # 创建构建信息
+        @"
+        🚀 Jasper Designer Windows Build (Optimized)
+
+        Build Info:
+        - Time: $(Get-Date)
+        - Type: Optimized Build with cargo-chef + sccache
+        - Branch: $env:GITHUB_REF_NAME
+        - Commit: $env:GITHUB_SHA
+        - Run ID: $env:GITHUB_RUN_ID
+
+        Optimizations:
+        ✅ cargo-chef for dependency caching
+        ✅ sccache for compilation caching
+        ✅ npm cache for node modules
+        ✅ Incremental builds enabled
+
+        Usage:
+        1. Extract the package
+        2. Run jasper-designer.exe
+        "@  | Out-File -FilePath "$packageName/BUILD_INFO.txt" -Encoding UTF8
+
+        # 打包
+        Compress-Archive -Path $packageName -DestinationPath "$packageName.zip" -Force
+
+        # 设置环境变量
+        echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
+        echo "PACKAGE_ZIP=$packageName.zip" >> $env:GITHUB_ENV
+
+        Write-Host "📦 Build package created: $packageName.zip"
+
+    # 上传构建产物
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: jasper-designer-windows-optimized-${{ github.run_id }}
+        path: ${{ env.PACKAGE_ZIP }}
+        retention-days: 30
+
+    # 输出构建时间统计
+    - name: Build time report
+      shell: powershell
+      run: |
+        Write-Host "=== Build Time Report ==="
+        Write-Host "Total workflow time will be shown in Actions summary"
+        Write-Host "Check sccache stats above for cache hit rate"
+        Write-Host "========================="
