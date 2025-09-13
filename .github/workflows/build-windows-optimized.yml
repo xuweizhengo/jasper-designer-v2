@@ -8,8 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
 
 jobs:
   build:
@@ -25,9 +23,23 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
-    # 安装sccache用于Rust编译缓存
-    - name: Setup sccache
+    # 尝试安装sccache，但允许失败
+    - name: Setup sccache (optional)
+      id: sccache
+      continue-on-error: true
       uses: mozilla-actions/sccache-action@v0.0.3
+
+    # 设置编译器包装（如果sccache可用）
+    - name: Configure compiler wrapper
+      shell: powershell
+      run: |
+        if ("${{ steps.sccache.outcome }}" -eq "success") {
+          echo "RUSTC_WRAPPER=sccache" >> $env:GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $env:GITHUB_ENV
+          Write-Host "✅ sccache enabled for caching"
+        } else {
+          Write-Host "⚠️ sccache unavailable, using direct compilation"
+        }
 
     # 安装cargo-chef用于依赖缓存
     - name: Install cargo-chef
@@ -144,8 +156,10 @@ jobs:
       env:
         RUST_LOG: info
 
-    # 显示sccache统计
+    # 显示sccache统计（如果可用）
     - name: Show sccache stats
+      if: steps.sccache.outcome == 'success'
+      continue-on-error: true
       run: |
         sccache --show-stats
 
@@ -226,5 +240,9 @@ jobs:
       run: |
         Write-Host "=== Build Time Report ==="
         Write-Host "Total workflow time will be shown in Actions summary"
-        Write-Host "Check sccache stats above for cache hit rate"
+        if ("${{ steps.sccache.outcome }}" -eq "success") {
+          Write-Host "Check sccache stats above for cache hit rate"
+        } else {
+          Write-Host "sccache was unavailable - using cargo-chef cache only"
+        }
         Write-Host "========================="
