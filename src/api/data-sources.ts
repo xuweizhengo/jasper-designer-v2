@@ -171,27 +171,27 @@ export class DataSourceAPI {
   }
 
   static async deleteDataSource(sourceId: string): Promise<void> {
-    return invoke('delete_data_source', { sourceId });
+    return invoke('delete_data_source', { req: { sourceId } });
   }
 
   static async updateConfig(sourceId: string, config: any): Promise<void> {
-    return invoke('update_data_source_config', { sourceId, config });
+    return invoke('update_data_source_config', { req: { sourceId, config } });
   }
 
   static async queryDataSource(sourceId: string, query: DataQuery): Promise<DataSet> {
-    return invoke('query_data_source', { sourceId, query });
+    return invoke('query_data_source', { req: { sourceId, query } });
   }
 
   static async getDataPreview(sourceId: string, limit?: number): Promise<DataSet> {
-    return invoke('get_data_preview', { sourceId, limit });
+    return invoke('get_data_preview', { req: { sourceId, limit } });
   }
 
   static async testConnection(providerType: string, config: any): Promise<boolean> {
-    return invoke('test_data_source_connection', { providerType, config });
+    return invoke('test_data_source_connection', { req: { providerType, config } });
   }
 
   static async discoverSchema(providerType: string, config: any): Promise<DataSchema> {
-    return invoke('discover_schema', { providerType, config });
+    return invoke('discover_schema', { req: { providerType, config } });
   }
 
   // 数据库特定操作
@@ -204,7 +204,7 @@ export class DataSourceAPI {
   }
 
   static async executeDatabasePreview(config: any, sql: string, limit?: number): Promise<any> {
-    return invoke('execute_database_preview', { config, sql, limit });
+    return invoke('execute_database_preview', { req: { config, sql, limit } });
   }
 
   static async validateSqlSyntax(sql: string, databaseType: string): Promise<ValidationResult> {
@@ -227,7 +227,7 @@ export class DataSourceAPI {
       console.log('🔍 参数对象的键:', Object.keys(params));
       console.log('🔍 参数JSON:', JSON.stringify(params));
       
-      return await invoke('validate_sql_syntax', params);
+      return await invoke('validate_sql_syntax', { req: params });
     } catch (error) {
       console.error('❌ 调用失败:', error);
       
@@ -236,7 +236,7 @@ export class DataSourceAPI {
   }
 
   static async formatSql(sql: string, databaseType: string): Promise<string> {
-    return invoke('format_sql', { sql, databaseType });
+    return invoke('format_sql', { req: { sql, databaseType } });
   }
 
   // 数据源创建和保存
@@ -259,17 +259,19 @@ export class DataSourceAPI {
       console.log('🔍 实际传递的 selectedTables:', selectedTables);
       
       const dataSourceId = await invoke('create_database_source', {
-        name: request.name,
-        description: request.description || null,
-        databaseType: config.database_type,
-        host: config.host,
-        port: config.port,
-        database: config.database,
-        username: config.username,
-        password: config.password || null,
-        sql: request.sql,
-        selectedTables: selectedTables,
-        tags: request.tags ? request.tags : null,
+        req: {
+          name: request.name,
+          description: request.description || null,
+          databaseType: config.database_type,
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          username: config.username,
+          password: config.password || null,
+          sql: request.sql,
+          selectedTables: selectedTables,
+          tags: request.tags ? request.tags : null,
+        }
       });
 
       return {
@@ -292,7 +294,7 @@ export class DataSourceAPI {
 
   // 兼容性方法
   static async createDataSource(name: string, type: string, config: any): Promise<string> {
-    return invoke('create_data_source', { name, providerType: type, config });
+    return invoke('create_data_source', { req: { name, providerType: type, config } });
   }
 
   static async getPreview(sourceId: string, _path?: string, limit?: number): Promise<DataSet> {
@@ -304,7 +306,7 @@ export class DataSourceAPI {
   }
 
   static async evaluateExpression(sourceId: string, expression: string, context?: any): Promise<any> {
-    return invoke('evaluate_expression', { sourceId, expression, context });
+    return invoke('evaluate_expression', { req: { sourceId, expression, context } });
   }
 
   static async getAvailableTypes(): Promise<DataSourceTypeInfo[]> {
@@ -312,19 +314,19 @@ export class DataSourceAPI {
   }
 
   static async getSchema(sourceId: string): Promise<DataSchema> {
-    return invoke('get_data_source_schema', { sourceId });
+    return invoke('get_data_source_schema', { req: { sourceId } });
   }
 
   static async getConfigSchema(providerType: string): Promise<any> {
-    return invoke('get_config_schema', { providerType });
+    return invoke('get_config_schema', { req: { providerType } });
   }
 
   static async getDefaultConfig(providerType: string): Promise<any> {
-    return invoke('get_default_config', { providerType });
+    return invoke('get_default_config', { req: { providerType } });
   }
 
   static async validateConfig(providerType: string, config: any): Promise<any> {
-    return invoke('validate_config', { providerType, config });
+    return invoke('validate_config', { req: { providerType, config } });
   }
 
   static async captureDataPreview(config: any, sql: string): Promise<any> {

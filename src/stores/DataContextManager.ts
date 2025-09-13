@@ -38,30 +38,42 @@ export class DataContextManagerImpl implements DataContextManager {
       console.log('🔍 找到数据源:', dataSource);
 
       // 兼容性处理：处理后端可能返回的不同字段名
-      const providerType = (dataSource as any).providerType || 
-                          (dataSource as any).type_name || 
+      const providerType = (dataSource as any).providerType ||
+                          (dataSource as any).provider_type ||
+                          (dataSource as any).type_name ||
                           'json'; // 兜底值
 
       console.log('🔍 推断的 providerType:', providerType);
 
-      // 获取数据预览
-      const previewData = await DataSourceAPI.getPreview(dataSourceId, undefined, 1);
-      console.log('🔍 预览数据:', previewData);
-      
-      // 获取数据源schema信息
-      const schema = await DataSourceAPI.getSchema(dataSourceId);
-      console.log('🔍 Schema信息:', schema);
-      
-      // 构建字段信息
-      const fields: DataField[] = schema.columns.map(col => ({
+      // 尝试获取数据预览和schema，但即使失败也保持上下文可用
+      let previewData: any = { rows: [], totalCount: 0 };
+      let schema: any = { columns: [] };
+      let previewError: any = null;
+      try {
+        previewData = await DataSourceAPI.getPreview(dataSourceId, undefined, 1);
+        console.log('🔍 预览数据:', previewData);
+      } catch (e) {
+        console.warn('⚠️  获取数据预览失败，继续构建上下文:', e);
+        previewError = e;
+      }
+      try {
+        schema = await DataSourceAPI.getSchema(dataSourceId);
+        console.log('🔍 Schema信息:', schema);
+      } catch (e) {
+        console.warn('⚠️  获取Schema失败，继续构建上下文:', e);
+        if (!previewError) previewError = e;
+      }
+
+      // 构建字段信息（容错）
+      const fields: DataField[] = Array.isArray(schema.columns) ? schema.columns.map((col: any) => ({
         name: col.name,
         displayName: col.description || col.name,
         type: this.mapDataType(col.data_type),
-        nullable: col.nullable,
+        nullable: !!col.nullable,
         sample: col.default_value
-      }));
+      })) : [];
 
-      // 设置新的数据上下文
+      // 设置新的数据上下文（即使有错误，也尽量保留名称/类型）
       const newContext: DataContext = {
         dataSource: {
           id: dataSourceId,
@@ -72,9 +84,10 @@ export class DataContextManagerImpl implements DataContextManager {
         currentRecord: {
           index: 0,
           total: (previewData as any).totalCount ?? (previewData as any).total_rows ?? (previewData as any).total_count ?? 0,
-          data: previewData.rows[0] || {}
+          data: (previewData && previewData.rows && previewData.rows[0]) ? previewData.rows[0] : {}
         },
-        fields
+        fields,
+        ...(previewError ? { error: { type: 'system', message: String(previewError), details: previewError } } : {})
       };
 
       console.log('✅ 创建新的数据上下文:', newContext);
@@ -93,12 +106,23 @@ export class DataContextManagerImpl implements DataContextManager {
     } catch (error) {
       console.error('设置数据源失败:', error);
       
-      // 设置错误状态
+      // 尽可能保留真实的provider/name信息
+      let name = '';
+      let providerType: string | undefined = undefined;
+      try {
+        const sources = await DataSourceAPI.listDataSources();
+        const ds = sources.find(s => s.id === dataSourceId);
+        if (ds) {
+          name = ds.name;
+          providerType = (ds as any).providerType || (ds as any).provider_type || (ds as any).type_name;
+        }
+      } catch (_) {}
+
       const errorContext: DataContext = {
         dataSource: {
           id: dataSourceId,
-          type: 'json',
-          name: '未知数据源',
+          type: this.inferDataSourceType(providerType || 'json'),
+          name: name || '未知数据源',
           status: 'error'
         },
         currentRecord: {
@@ -224,14 +248,15 @@ export class DataContextManagerImpl implements DataContextManager {
       return 'json';
     }
     
-    switch (providerType.toLowerCase()) {
-      case 'json': return 'json';
-      case 'excel': return 'excel';
-      case 'sql': return 'sql';
-      case 'xml': return 'xml';
-      case 'csv': return 'csv';
-      default: return 'json';
-    }
+    const pt = providerType.toLowerCase();
+    if (pt === 'json') return 'json';
+    if (pt === 'excel') return 'excel';
+    if (pt === 'sql') return 'sql';
+    if (pt === 'xml') return 'xml';
+    if (pt === 'csv') return 'csv';
+    // 兼容后端提供的数据库类型标识，如 database_mysql / database_postgresql
+    if (pt.startsWith('database')) return 'sql';
+    return 'json';
   }
 
   private mapDataType(dataType: any): DataField['type'] {

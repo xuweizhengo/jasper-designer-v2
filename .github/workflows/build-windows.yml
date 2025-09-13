@@ -26,7 +26,9 @@ jobs:
         targets: x86_64-pc-windows-msvc
         
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm cache clean --force
+        npm install --legacy-peer-deps
       
     - name: Build application
       run: npm run tauri build

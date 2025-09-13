@@ -4,6 +4,19 @@
 
 set -Eeuo pipefail
 
+# === 终端保护机制 ===
+# 在脚本退出时自动清理，防止终端被劫持
+cleanup_terminal() {
+    # 只在必要时重置终端
+    if [ -t 1 ]; then
+        # 重置终端状态
+        stty sane 2>/dev/null || true
+    fi
+}
+
+# 设置退出陷阱
+trap cleanup_terminal EXIT INT TERM
+
 # -------- Helpers --------
 req() { command -v "$1" >/dev/null 2>&1 || { echo -e "\033[0;31m✖ 缺少依赖: $1\033[0m"; exit 1; }; }
 die() { echo -e "\033[0;31m✖ $*\033[0m"; exit 1; }
@@ -37,6 +50,7 @@ NC='\033[0m' # No Color
 echo_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
 echo_success() { echo -e "${GREEN}✅ $1${NC}"; }
 echo_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+echo_error() { echo -e "${RED}❌ $1${NC}"; }
 echo_title() { echo -e "${CYAN}🎯 $1${NC}"; }
 
 clear
@@ -97,32 +111,43 @@ fi
 chmod +x scripts/package-full.sh 2>/dev/null || true
 chmod +x scripts/package-incremental.sh 2>/dev/null || true
 
-# 显示菜单
-echo "请选择打包类型:"
-echo ""
-echo "  1) 🏗️  全量打包 (完整重新构建)"
-echo "     - 适用于: 新功能、后端修改、发布版本"
-echo "     - 时间: 优化后 (5-12分钟，原20分钟)"
-echo "     - 特性: 智能检测、增量构建、性能优化"
-echo ""
-echo "  2) ⚡ 智能增量 (检测变更构建)"
-echo "     - 适用于: 代码修改、日常开发、快速测试"
-echo "     - 时间: 极短 (30秒-2分钟)"
-echo "     - 特性: 智能检测、按需构建、缓存复用"
-echo ""
-echo "  3) 📋 查看现有包"
-echo "     - 列出所有构建的版本包"
-echo ""
-echo "  4) 🧹 清理历史版本"
-echo "     - 仅保留最新3个版本，其余移至archives"
-echo ""
-echo "  q) 退出"
-echo ""
+# 如果没有设置ACTION_MENU，显示菜单
+if [ -z "${ACTION_MENU:-}" ]; then
+    # 显示菜单
+    echo "请选择打包类型:"
+    echo ""
+    echo "  1) 🏗️  全量打包 (完整重新构建)"
+    echo "     - 适用于: 新功能、后端修改、发布版本"
+    echo "     - 时间: 优化后 (5-12分钟，原20分钟)"
+    echo "     - 特性: 智能检测、增量构建、性能优化"
+    if command -v sccache >/dev/null 2>&1; then
+        echo "     - ✨ sccache 已启用 (编译缓存加速)"
+    fi
+    echo ""
+    echo "  2) ⚡ 智能增量 (检测变更构建)"
+    echo "     - 适用于: 代码修改、日常开发、快速测试"
+    echo "     - 时间: 极短 (30秒-2分钟)"
+    echo "     - 特性: 智能检测、按需构建、缓存复用"
+    echo ""
+    echo "  3) 📋 查看现有包"
+    echo "     - 列出所有构建的版本包"
+    echo ""
+    echo "  4) 🧹 清理历史版本"
+    echo "     - 仅保留最新3个版本，其余移至archives"
+    echo ""
+    echo "  q) 退出"
+    echo ""
 
-# 读取用户选择
-read -p "请输入选项 (1-4, q): " -n 1 -r
-echo ""
-echo ""
+    # 读取用户选择
+    if [ -t 0 ]; then
+        read -p "请输入选项 (1-4, q): " -n 1 -r
+        echo ""
+        echo ""
+    else
+        echo_error "非交互式模式，请使用参数模式运行"
+        exit 1
+    fi
+fi
 
 case ${ACTION_MENU:-$REPLY} in
     1)

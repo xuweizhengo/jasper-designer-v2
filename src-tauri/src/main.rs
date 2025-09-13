@@ -5,6 +5,8 @@ mod core;
 mod commands;
 mod errors;
 mod data;
+mod preview;
+mod types;
 
 use tauri::Manager;
 use std::sync::Arc;
@@ -71,6 +73,18 @@ async fn main() {
             commands::file::export_json,
             commands::file::get_recent_templates,
             commands::toggle_devtools,
+            // Preview commands
+            preview::commands::generate_preview,
+            preview::commands::batch_render,
+            preview::commands::generate_thumbnail,
+            preview::commands::get_supported_formats,
+            preview::commands::get_default_render_options,
+            preview::commands::validate_render_options,
+            preview::commands::get_render_stats,
+            preview::commands::clear_render_cache,
+            preview::commands::export_to_file,
+            preview::commands::get_render_progress,
+            preview::commands::cancel_render_task,
             // Data source management commands
             data::commands::get_available_data_source_types,
             data::commands::create_data_source,

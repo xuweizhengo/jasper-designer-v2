@@ -157,25 +157,16 @@ export const PreviewModeToggle = () => {
         {(['design', 'data', 'preview'] as PreviewModeType[]).map(mode => {
           const modeInfo = getModeInfo(mode);
           const isActive = state().mode === mode;
-          const isPreviewMode = mode === 'preview';
           
           return (
             <button
-              class={`mode-btn ${isActive ? 'active' : ''} ${isPreviewMode ? 'preview-placeholder' : ''}`}
-              onClick={() => {
-                if (isPreviewMode) {
-                  // 预览模式暂未实现，显示提示
-                  alert('🔍 预览模式即将推出！\n\n✨ 即将支持的功能：\n• 纯净的最终效果预览\n• 隐藏所有设计辅助元素\n• 只读模式，专注查看输出效果');
-                  return;
-                }
-                actions.setMode(mode);
-              }}
+              class={`mode-btn ${isActive ? 'active' : ''}`}
+              onClick={() => actions.setMode(mode)}
               disabled={state().loading}
-              title={isPreviewMode ? '预览模式 - 即将推出' : `切换到${modeInfo.text}`}
+              title={`切换到${modeInfo.text}`}
             >
               <span class="button-icon">{modeInfo.icon}</span>
               <span class="button-text">{modeInfo.text}</span>
-              {isPreviewMode && <span class="coming-soon">敬请期待</span>}
             </button>
           );
         })}

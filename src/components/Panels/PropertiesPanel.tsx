@@ -1,4 +1,4 @@
-import { Component, createMemo, Match, Show, Switch, createSignal, onMount, For } from 'solid-js';
+import { Component, createMemo, Match, Show, Switch, createSignal, onMount, For, createEffect } from 'solid-js';
 import { useAppContext } from '../../stores/AppContext';
 import type { ReportElement, TextAlign } from '../../types';
 import { DataSourceAPI, DataSourceInfo } from '../../api/data-sources';
@@ -223,8 +223,14 @@ const ElementProperties: Component<ElementPropertiesProps> = (props) => {
               <DataFieldProperties 
                 content={fieldContent()} 
                 onUpdate={(updates) => {
-                  console.log('DataField content update:', updates);
+                  console.log('🔍 [PropertiesPanel] DataField content update 接收到:', {
+                    更新内容: updates,
+                    元素ID: props.element.id,
+                    当前content: fieldContent(),
+                    更新前data_source_id: fieldContent().data_source_id
+                  });
                   props.onUpdate(props.element.id, 'content', updates);
+                  console.log('🔍 [PropertiesPanel] 已调用 props.onUpdate');
                 }}
               />
             </div>
@@ -744,6 +750,15 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
   const [dataSources, setDataSources] = createSignal<DataSourceInfo[]>([]);
   const [loadingDataSources, setLoadingDataSources] = createSignal(false);
 
+  // 监测 props.content 的变化
+  createEffect(() => {
+    console.log('🔍 [DataFieldProperties] props.content 变化:', {
+      data_source_id: props.content.data_source_id,
+      expression: props.content.expression,
+      完整content: props.content
+    });
+  });
+
   // Load available data sources on mount
   onMount(async () => {
     try {
@@ -758,9 +773,26 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
   });
 
   const handleDataSourceChange = (dataSourceId: string) => {
+    console.log('🔍 [DataField] handleDataSourceChange 触发:', {
+      新值: dataSourceId,
+      当前值: props.content.data_source_id,
+      是否为空: dataSourceId === '',
+      将要更新的值: dataSourceId === '' ? undefined : dataSourceId
+    });
+    
     props.onUpdate({ 
       data_source_id: dataSourceId === '' ? undefined : dataSourceId 
     });
+    
+    console.log('🔍 [DataField] onUpdate 已调用，等待父组件更新');
+    
+    // 延迟检查是否更新成功
+    setTimeout(() => {
+      console.log('🔍 [DataField] 更新后检查:', {
+        更新后的值: props.content.data_source_id,
+        是否更新成功: props.content.data_source_id === (dataSourceId === '' ? undefined : dataSourceId)
+      });
+    }, 100);
   };
 
   const selectedDataSource = createMemo(() => {
@@ -777,15 +809,34 @@ const DataFieldProperties: Component<{ content: any; onUpdate: (updates: any) =>
               <select
                 class="property-select"
                 value={props.content.data_source_id || ''}
-                onChange={(e) => handleDataSourceChange(e.currentTarget.value)}
+                onChange={(e) => {
+                  console.log('🔍 [DataField] select onChange 事件触发:', {
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                    value: e.currentTarget.value,
+                    selectedIndex: e.currentTarget.selectedIndex,
+                    selectedOption: e.currentTarget.options[e.currentTarget.selectedIndex]?.text
+                  });
+                  handleDataSourceChange(e.currentTarget.value);
+                }}
+                onInput={(e) => {
+                  console.log('🔍 [DataField] select onInput 事件触发:', e.currentTarget.value);
+                }}
               >
                 <option value="">选择数据源</option>
                 <For each={dataSources()}>
-                  {(dataSource) => (
-                    <option value={dataSource.id}>
-                      {dataSource.name} ({(dataSource as any).providerType || (dataSource as any).provider_type})
-                    </option>
-                  )}
+                  {(dataSource) => {
+                    console.log('🔍 [DataField] 渲染数据源选项:', {
+                      id: dataSource.id,
+                      name: dataSource.name,
+                      当前选中: props.content.data_source_id === dataSource.id
+                    });
+                    return (
+                      <option value={dataSource.id}>
+                        {dataSource.name} ({(dataSource as any).providerType || (dataSource as any).provider_type})
+                      </option>
+                    );
+                  }}
                 </For>
               </select>
             }>

@@ -33,6 +33,15 @@ mysql = "24.0"
 # sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "mysql", "postgres", "sqlite", "chrono", "uuid", "json"] }
 regex = "1.0"
 
+# Preview rendering dependencies
+resvg = "0.37"
+tiny-skia = "0.11"
+usvg = "0.37"
+printpdf = "0.6"
+image = "0.24"
+moka = { version = "0.12", features = ["sync"] }
+rust_xlsxwriter = "0.60"
+
 [dev-dependencies]
 tempfile = "3.0"
 

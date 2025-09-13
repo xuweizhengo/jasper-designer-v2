@@ -4,12 +4,15 @@ use async_trait::async_trait;
 use serde_json::{json, Value};
 use sqlx::{MySql, Pool, Row, Column, TypeInfo};
 use chrono::Utc;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct DatabaseSource {
     id: String,
     name: String,
     config: Value,
     schema: Option<DataSchema>,
+    pool: Arc<RwLock<Option<Pool<MySql>>>>,
 }
 
 impl DatabaseSource {
@@ -19,7 +22,60 @@ impl DatabaseSource {
             name,
             config,
             schema: None,
+            pool: Arc::new(RwLock::new(None)),
         }
+    }
+    
+    async fn get_pool(&self) -> Result<Pool<MySql>, DataError> {
+        // 先检查是否已有连接池
+        {
+            let pool_guard = self.pool.read().await;
+            if let Some(pool) = pool_guard.as_ref() {
+                // 测试连接是否有效
+                if let Ok(_) = sqlx::query("SELECT 1").fetch_one(pool).await {
+                    return Ok(pool.clone());
+                }
+                // 连接无效，继续创建新连接
+                println!("⚠️ 检测到连接池失效，重新创建连接");
+            }
+        }
+        
+        // 创建新连接池
+        let host = self.config["host"].as_str().unwrap_or("localhost");
+        let port = self.config["port"].as_u64().unwrap_or(3306) as u16;
+        let database = self.config["database"].as_str().unwrap_or("");
+        let username = self.config["username"].as_str().unwrap_or("");
+        let password = self.config["password"].as_str().unwrap_or("");
+        
+        let connection_string = format!(
+            "mysql://{}:{}@{}:{}/{}?connect_timeout=30",
+            username, password, host, port, database
+        );
+        
+        println!("🔄 创建数据库连接池: {}@{}:{}/{}", username, host, port, database);
+        
+        // 创建连接池配置
+        let pool = sqlx::mysql::MySqlPoolOptions::new()
+            .max_connections(5)
+            .min_connections(1)
+            .acquire_timeout(std::time::Duration::from_secs(30))
+            .test_before_acquire(true) // 获取前测试连接
+            .connect(&connection_string)
+            .await
+            .map_err(|e| {
+                println!("❌ 数据库连接失败: {}", e);
+                DataError::ConnectionError { 
+                    message: format!("数据库连接失败: {}", e),
+                    retry_after: Some(std::time::Duration::from_secs(5))
+                }
+            })?;
+        
+        // 保存连接池
+        let mut pool_guard = self.pool.write().await;
+        *pool_guard = Some(pool.clone());
+        
+        println!("✅ 数据库连接池创建成功");
+        Ok(pool)
     }
 }
 
@@ -113,27 +169,11 @@ impl DataSource for DatabaseSource {
     }
 
     async fn get_data(&self, query: Option<DataQuery>) -> Result<DataSet, DataError> {
-        let host = self.config["host"].as_str().unwrap_or("localhost");
-        let port = self.config["port"].as_u64().unwrap_or(3306) as u16;
+        // 使用持久化连接池
+        let pool = self.get_pool().await?;
+        
         let database = self.config["database"].as_str().unwrap_or("");
-        let username = self.config["username"].as_str().unwrap_or("");
-        let password = self.config["password"].as_str().unwrap_or("");
-        
-        let connection_string = format!(
-            "mysql://{}:{}@{}:{}/{}?connect_timeout=10&socket_timeout=30",
-            username, password, host, port, database
-        );
-        
-        println!("🔄 正在查询数据库: {}:{}@{}:{}/{}", username, "***", host, port, database);
-        
-        let pool = sqlx::MySqlPool::connect(&connection_string).await
-            .map_err(|e| {
-                println!("❌ 数据库连接失败: {}", e);
-                DataError::ConnectionError { 
-                    message: e.to_string(),
-                    retry_after: Some(std::time::Duration::from_secs(5))
-                }
-            })?;
+        println!("🔄 正在查询数据库: {}", database);
         
         // 构建SQL查询
         let sql = if let Some(q) = &query {
@@ -168,16 +208,44 @@ impl DataSource for DatabaseSource {
         println!("📋 执行SQL查询: {}", sql);
         
         let start_time = std::time::Instant::now();
-        let rows_result = sqlx::query(&sql)
-            .fetch_all(&pool)
-            .await
-            .map_err(|e| {
-                println!("❌ SQL查询失败: {}", e);
-                DataError::QueryError { 
-                    message: format!("查询执行失败: {}", e), 
-                    query: Some(sql.clone()) 
+        
+        // 执行查询，如果失败尝试重连
+        let rows_result = match sqlx::query(&sql).fetch_all(&pool).await {
+            Ok(rows) => rows,
+            Err(e) => {
+                let error_str = e.to_string();
+                println!("❌ SQL查询失败: {}", error_str);
+                
+                // 检查是否是连接错误
+                if error_str.contains("EOF") || error_str.contains("Connection") || error_str.contains("closed") {
+                    println!("🔄 检测到连接错误，尝试重新连接...");
+                    
+                    // 清除旧连接池
+                    {
+                        let mut pool_guard = self.pool.write().await;
+                        *pool_guard = None;
+                    }
+                    
+                    // 获取新连接池并重试
+                    let new_pool = self.get_pool().await?;
+                    sqlx::query(&sql)
+                        .fetch_all(&new_pool)
+                        .await
+                        .map_err(|e| {
+                            println!("❌ 重试后仍然失败: {}", e);
+                            DataError::QueryError { 
+                                message: format!("查询执行失败（重试后）: {}", e), 
+                                query: Some(sql.clone()) 
+                            }
+                        })?
+                } else {
+                    return Err(DataError::QueryError { 
+                        message: format!("查询执行失败: {}", e), 
+                        query: Some(sql.clone()) 
+                    });
                 }
-            })?;
+            }
+        };
         
         let execution_time = start_time.elapsed();
         println!("✅ SQL查询完成，返回 {} 行数据，耗时 {:?}", rows_result.len(), execution_time);
@@ -249,7 +317,7 @@ impl DataSource for DatabaseSource {
         let password = self.config["password"].as_str().unwrap_or("");
         
         let connection_string = format!(
-            "mysql://{}:{}@{}:{}/{}",
+            "mysql://{}:{}@{}:{}/{}?connect_timeout=30&socket_timeout=30",
             username, password, host, port, database
         );
         
@@ -276,15 +344,138 @@ impl DataSource for DatabaseSource {
     }
 
     async fn refresh_schema(&mut self) -> Result<(), DataError> {
-        // 重新获取schema信息，目前简化处理
+        let database = self.config["database"].as_str().unwrap_or("");
+        let table_name = self.config["table"].as_str();
+        
+        println!("🔄 正在获取数据库Schema: {}", database);
+        
+        // 使用持久化连接池
+        let pool = self.get_pool().await?;
+        
+        // 获取表的列信息
+        let mut columns = vec![];
+        
+        if let Some(table) = table_name {
+            // 如果指定了表名，只获取该表的列信息
+            let query = format!(
+                "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_KEY, COLUMN_COMMENT 
+                 FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}' 
+                 ORDER BY ORDINAL_POSITION",
+                database, table
+            );
+            
+            let rows = sqlx::query(&query)
+                .fetch_all(&pool)
+                .await
+                .map_err(|e| DataError::QueryError { 
+                    message: format!("Failed to fetch schema: {}", e),
+                    query: Some(query.clone())
+                })?;
+            
+            for row in rows {
+                let column_name: String = row.get(0);
+                let data_type: String = row.get(1);
+                let is_nullable: String = row.get(2);
+                let column_default: Option<String> = row.try_get(3).ok();
+                let column_key: String = row.get(4);
+                let column_comment: Option<String> = row.try_get(5).ok();
+                
+                columns.push(DataColumn {
+                    name: column_name.clone(),
+                    display_name: Some(column_name.clone()),
+                    data_type: map_column_type(&data_type),
+                    nullable: is_nullable == "YES",
+                    description: column_comment,
+                    default_value: column_default.map(|v| json!(v)),
+                    format_hint: None,
+                    constraints: vec![],
+                    sample_values: vec![],
+                    source_column: Some(column_name.clone()),
+                    source_table: Some(table.to_string()),
+                    is_primary_key: column_key == "PRI",
+                    is_foreign_key: column_key == "MUL",
+                });
+            }
+            
+            println!("✅ Schema获取成功: 表 {} 包含 {} 个字段", table, columns.len());
+        } else {
+            // 如果没有指定表名，获取数据库中所有表的第一个表的列信息
+            let tables_query = format!(
+                "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
+                 WHERE TABLE_SCHEMA = '{}' AND TABLE_TYPE = 'BASE TABLE' 
+                 LIMIT 1",
+                database
+            );
+            
+            let table_row = sqlx::query(&tables_query)
+                .fetch_optional(&pool)
+                .await
+                .map_err(|e| DataError::QueryError { 
+                    message: format!("Failed to list tables: {}", e),
+                    query: Some(tables_query.clone())
+                })?;
+            
+            if let Some(table_row) = table_row {
+                let first_table: String = table_row.get(0);
+                
+                let query = format!(
+                    "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_KEY, COLUMN_COMMENT 
+                     FROM INFORMATION_SCHEMA.COLUMNS 
+                     WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}' 
+                     ORDER BY ORDINAL_POSITION",
+                    database, first_table
+                );
+                
+                let rows = sqlx::query(&query)
+                    .fetch_all(&pool)
+                    .await
+                    .map_err(|e| DataError::QueryError { 
+                        message: format!("Failed to fetch schema: {}", e),
+                        query: Some(query.clone())
+                    })?;
+                
+                for row in rows {
+                    let column_name: String = row.get(0);
+                    let data_type: String = row.get(1);
+                    let is_nullable: String = row.get(2);
+                    let column_default: Option<String> = row.try_get(3).ok();
+                    let column_key: String = row.get(4);
+                    let column_comment: Option<String> = row.try_get(5).ok();
+                    
+                    columns.push(DataColumn {
+                        name: column_name.clone(),
+                        display_name: Some(column_name.clone()),
+                        data_type: map_column_type(&data_type),
+                        nullable: is_nullable == "YES",
+                        description: column_comment,
+                        default_value: column_default.map(|v| json!(v)),
+                        format_hint: None,
+                        constraints: vec![],
+                        sample_values: vec![],
+                        source_column: Some(column_name.clone()),
+                        source_table: Some(first_table.clone()),
+                        is_primary_key: column_key == "PRI",
+                        is_foreign_key: column_key == "MUL",
+                    });
+                }
+                
+                println!("✅ Schema获取成功: 默认表 {} 包含 {} 个字段", first_table, columns.len());
+            } else {
+                println!("⚠️ 数据库 {} 中没有找到任何表", database);
+            }
+        }
+        
+        // 更新schema
         self.schema = Some(DataSchema {
             version: "1.0".to_string(),
             last_updated: Utc::now(),
-            columns: vec![],
+            columns,
             primary_key: None,
             indexes: vec![],
             relationships: vec![],
         });
+        
         Ok(())
     }
 }

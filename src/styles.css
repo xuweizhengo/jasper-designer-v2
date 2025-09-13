@@ -816,3 +816,21 @@ html, body {
   border-radius: var(--radius-sm);
   margin-top: 0.5rem;
 }
+
+/* Preview Mode Animations */
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  66% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.animate-fade-out {
+  animation: fade-out 3s ease-out forwards;
+}

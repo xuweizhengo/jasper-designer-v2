@@ -616,8 +616,7 @@ pub struct ExecutePreviewReq { config: serde_json::Value, sql: String, limit: Op
 
 #[tauri::command]
 pub async fn execute_database_preview(req: ExecutePreviewReq) -> Result<QueryResult, String> {
-    use crate::data::database_simple::{DatabaseConfig, QueryResult as SimpleQueryResult};
-    use std::time::Instant;
+    use crate::data::database_simple::{DatabaseConfig, execute_database_query};
     
     let db_config: DatabaseConfig = serde_json::from_value(req.config)
         .map_err(|e| format!("配置解析失败: {}", e))?;
@@ -627,48 +626,16 @@ pub async fn execute_database_preview(req: ExecutePreviewReq) -> Result<QueryRes
         return Err("SQL查询不能为空".to_string());
     }
     
-    // 确保查询有LIMIT限制
-    let final_sql = if !sql.to_uppercase().contains("LIMIT") {
-        let limit_value = req.limit.unwrap_or(50);
-        format!("{} LIMIT {}", sql, limit_value)
-    } else {
-        sql.to_string()
-    };
+    // 调用真实的数据库查询函数并转换结果类型
+    let result = execute_database_query(db_config, sql.to_string(), req.limit).await?;
     
-    // 模拟查询执行
-    let start_time = Instant::now();
-    
-    // 这里应该是真实的数据库查询，现在先返回模拟数据
-    let execution_time = start_time.elapsed().as_millis() as u64;
-    
-    // 生成示例数据用于测试
-    let columns = vec![
-        "id".to_string(),
-        "name".to_string(), 
-        "email".to_string(),
-        "created_at".to_string(),
-        "status".to_string(),
-    ];
-    
-    let mut rows = Vec::new();
-    for i in 1..=std::cmp::min(req.limit.unwrap_or(10), 50) {
-        let mut row = std::collections::HashMap::new();
-        row.insert("id".to_string(), serde_json::Value::Number(serde_json::Number::from(i)));
-        row.insert("name".to_string(), serde_json::Value::String(format!("用户{}", i)));
-        row.insert("email".to_string(), serde_json::Value::String(format!("user{}@example.com", i)));
-        row.insert("created_at".to_string(), serde_json::Value::String("2024-01-01 10:00:00".to_string()));
-        row.insert("status".to_string(), serde_json::Value::String(if i % 2 == 0 { "active" } else { "inactive" }.to_string()));
-        rows.push(row);
-    }
-    
-    let total_rows = rows.len();
-    
+    // 转换为 commands::QueryResult
     Ok(QueryResult {
-        columns,
-        rows,
-        total_rows,
-        execution_time,
-        query: final_sql,
+        columns: result.columns,
+        rows: result.rows,
+        total_rows: result.total_rows,
+        execution_time: result.execution_time,
+        query: result.query,
     })
 }
 

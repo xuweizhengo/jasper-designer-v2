@@ -138,11 +138,17 @@ impl DataSourceProvider for DatabaseProvider {
     ) -> Result<Box<dyn DataSource>, ProviderError> {
         self.validate_config(config).map_err(|e| ProviderError::ConfigError(e.to_string()))?;
         
-        let source = crate::data::providers::database::source::DatabaseSource::new(
+        let mut source = crate::data::providers::database::source::DatabaseSource::new(
             id,
             name,
             config.clone(),
         );
+        
+        // 创建数据源后立即获取schema
+        if let Err(e) = source.refresh_schema().await {
+            println!("⚠️ 初始化时获取schema失败: {}", e);
+        }
+        
         Ok(Box::new(source))
     }
 
@@ -154,7 +160,7 @@ impl DataSourceProvider for DatabaseProvider {
         let password = config["password"].as_str().unwrap_or("");
         
         let connection_string = format!(
-            "mysql://{}:{}@{}:{}/{}?connect_timeout=10&socket_timeout=30",
+            "mysql://{}:{}@{}:{}/{}?connect_timeout=30&socket_timeout=30",
             username, password, host, port, database
         );
         
@@ -190,7 +196,7 @@ impl DataSourceProvider for DatabaseProvider {
         let password = config["password"].as_str().unwrap_or("");
         
         let connection_string = format!(
-            "mysql://{}:{}@{}:{}/{}?connect_timeout=10&socket_timeout=30",
+            "mysql://{}:{}@{}:{}/{}?connect_timeout=30&socket_timeout=30",
             username, password, host, port, database
         );
         

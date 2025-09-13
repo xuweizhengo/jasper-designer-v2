@@ -53,7 +53,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
+      "targets": ["app"],
       "identifier": "com.jasper.designer",
       "icon": [
         "icons/32x32.png",
