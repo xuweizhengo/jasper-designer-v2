@@ -30,25 +30,102 @@ jobs:
         npm cache clean --force
         npm install --legacy-peer-deps
 
-    - name: Install ImageMagick and generate icons
+    - name: Generate compatible icons
       shell: powershell
       run: |
-        # 下载并安装ImageMagick
-        Write-Host "Downloading ImageMagick..."
-        $url = "https://imagemagick.org/archive/binaries/ImageMagick-7.1.1-45-portable-Q16-x64.zip"
-        $zipPath = "imagemagick.zip"
-        $extractPath = "imagemagick"
-        Invoke-WebRequest -Uri $url -OutFile $zipPath
-        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-        $env:PATH = "$PWD\imagemagick;$env:PATH"
+        Write-Host "Generating standard ICO file from base64..."
 
-        # 创建一个简单的彩色PNG作为临时图标
+        # 标准的32x32 ICO文件 (蓝色背景，白色J字母)
+        # 这是一个符合Windows 3.0 ICO格式标准的文件
+        $icoBase64 = @"
+        AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAABMLAAATCwAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////
+        AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A
+        ////AP///wD///8A////AP///wD///8A////AP///wBEgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7/
+        /v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        ///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+
+        //7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+
+        /v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+
+        /v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7/
+        /v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+/v7//v7+//7+/v9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA///+/v7//v7+//7+/v/+/v7//v7+//7+/v/+
+        /v7//v7+//7+/v9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA
+        //9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID/
+        /0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//
+        RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9EgP//RID//0SA//9E
+        gP//RID//0SA//9EgP//RID//0SA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAA
+        "@
+
+        # 将base64转换为字节数组并保存为ICO文件
+        $icoBytes = [Convert]::FromBase64String($icoBase64)
+        [System.IO.File]::WriteAllBytes("src-tauri/icons/icon.ico", $icoBytes)
+
+        # 生成其他所需的PNG文件
         Add-Type -AssemblyName System.Drawing
         $bitmap = New-Object System.Drawing.Bitmap 256, 256
         $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
 
         # 填充背景色（蓝色）
-        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 64, 128, 255))
+        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 68, 128, 255))
         $graphics.FillRectangle($brush, 0, 0, 256, 256)
 
         # 绘制文字
@@ -56,22 +133,23 @@ jobs:
         $textBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $graphics.DrawString("J", $font, $textBrush, 85, 70)
 
-        # 保存为PNG
-        $bitmap.Save("src-tauri/icons/temp.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        # 保存PNG文件
+        $bitmap.Save("src-tauri/icons/icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+        # 创建其他尺寸
+        $bitmap32 = New-Object System.Drawing.Bitmap $bitmap, 32, 32
+        $bitmap32.Save("src-tauri/icons/32x32.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bitmap32.Dispose()
+
+        $bitmap128 = New-Object System.Drawing.Bitmap $bitmap, 128, 128
+        $bitmap128.Save("src-tauri/icons/128x128.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bitmap128.Dispose()
 
         # 清理
         $graphics.Dispose()
         $bitmap.Dispose()
 
-        # 使用ImageMagick生成所有尺寸的PNG
-        .\imagemagick\magick.exe convert "src-tauri/icons/temp.png" -resize 256x256 "src-tauri/icons/icon.png"
-        .\imagemagick\magick.exe convert "src-tauri/icons/temp.png" -resize 32x32 "src-tauri/icons/32x32.png"
-        .\imagemagick\magick.exe convert "src-tauri/icons/temp.png" -resize 128x128 "src-tauri/icons/128x128.png"
-
-        # 使用ImageMagick生成正确格式的ICO文件
-        .\imagemagick\magick.exe convert "src-tauri/icons/temp.png" -resize 256x256 -define icon:auto-resize=256,128,96,64,48,32,16 "src-tauri/icons/icon.ico"
-
-        Write-Host "Generated temporary icons for build"
+        Write-Host "Generated standard icons for Windows build"
 
     - name: Build application
       run: npm run tauri build
