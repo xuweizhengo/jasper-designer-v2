@@ -254,7 +254,7 @@ jobs:
 
         # 创建构建信息
         @"
-        🚀 Jasper Designer Windows Build (Optimized with cargo-chef)
+        Jasper Designer Windows Build (Optimized with cargo-chef)
 
         Build Info:
         - Time: $(Get-Date)
@@ -264,12 +264,12 @@ jobs:
         - Run ID: $env:GITHUB_RUN_ID
 
         Optimizations:
-        ✅ cargo-chef for dependency caching
-        ✅ Incremental compilation
-        ✅ Target directory caching
-        ✅ Frontend build caching
-        ✅ npm cache optimization
-        ✅ Parallel job optimization
+        - cargo-chef for dependency caching
+        - Incremental compilation
+        - Target directory caching
+        - Frontend build caching
+        - npm cache optimization
+        - Parallel job optimization
 
         Usage:
         1. Extract the package
@@ -283,7 +283,7 @@ jobs:
         echo "PACKAGE_NAME=$packageName" >> $env:GITHUB_ENV
         echo "PACKAGE_ZIP=$packageName.zip" >> $env:GITHUB_ENV
 
-        Write-Host "📦 Build package created: $packageName.zip"
+        Write-Host "Build package created: $packageName.zip"
 
     # 上传构建产物
     - name: Upload build artifacts
