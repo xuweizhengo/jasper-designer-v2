@@ -1,4 +1,5 @@
 # 🎯 Jasper Designer V2.0
+<!-- GitHub Actions: Build Optimized -->
 
 **现代化报表设计器** - 基于 Rust + Tauri + Solid.js 构建的高性能桌面应用
 
