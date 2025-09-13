@@ -107,7 +107,7 @@ jobs:
 
         # 检查 target/release/.fingerprint 是否存在
         if (Test-Path "target/release/.fingerprint") {
-          Write-Host "✅ Found existing build artifacts"
+          Write-Host "Found existing build artifacts"
 
           # 检查最近的构建时间
           $lastBuild = (Get-ChildItem "target/release/.fingerprint" -Recurse |
@@ -117,16 +117,16 @@ jobs:
           $cargoLock = (Get-Item "Cargo.lock").LastWriteTime
 
           if ($lastBuild -gt $cargoLock) {
-            Write-Host "✅ Dependencies are up to date (last build: $lastBuild)"
+            Write-Host "Dependencies are up to date (last build: $lastBuild)"
             $needsCook = $false
           }
         }
 
         if ($needsCook) {
-          Write-Host "🔨 Cooking dependencies..."
+          Write-Host "Cooking dependencies..."
           cargo chef cook --release --recipe-path recipe.json --target x86_64-pc-windows-msvc
         } else {
-          Write-Host "⚡ Skipping dependency compilation - using cache"
+          Write-Host "Skipping dependency compilation - using cache"
         }
 
     # 安装前端依赖（优化）
@@ -139,7 +139,7 @@ jobs:
       shell: powershell
       run: |
         if (Test-Path "src-tauri/icons/icon.ico") {
-          Write-Host "✅ Icons already exist, skipping generation"
+          Write-Host "Icons already exist, skipping generation"
         } else {
           Write-Host "Generating standard ICO file..."
 
@@ -174,14 +174,14 @@ jobs:
           $graphics.Dispose()
           $bitmap.Dispose()
 
-          Write-Host "✅ Icons generated successfully"
+          Write-Host "Icons generated successfully"
         }
 
     # 构建应用（优化编译参数）
     - name: Build application
       shell: powershell
       run: |
-        Write-Host "🚀 Building with optimized settings..."
+        Write-Host "Building with optimized settings..."
 
         # 设置优化的环境变量
         $env:CARGO_BUILD_JOBS = [Environment]::ProcessorCount
@@ -198,13 +198,13 @@ jobs:
           $srcTime = (Get-ChildItem "src" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime
 
           if ($distTime -gt $srcTime) {
-            Write-Host "⚡ Frontend is up to date, skipping build"
+            Write-Host "Frontend is up to date, skipping build"
             $needsFrontendBuild = $false
           }
         }
 
         if ($needsFrontendBuild) {
-          Write-Host "🔨 Building frontend..."
+          Write-Host "Building frontend..."
           npm run build
         }
 
@@ -216,7 +216,7 @@ jobs:
           cargo build --release --target x86_64-pc-windows-msvc --no-default-features
         }
 
-        Write-Host "✅ Build completed!"
+        Write-Host "Build completed!"
       env:
         RUST_LOG: warn
         CARGO_INCREMENTAL: 1
@@ -301,7 +301,7 @@ jobs:
         Write-Host "Total workflow time will be shown in Actions summary"
         Write-Host ""
         Write-Host "Cache Status:"
-        Write-Host "- cargo-chef binary: ${{ steps.cache-chef-binary.outputs.cache-hit == 'true' && 'HIT ✅' || 'MISS ❌' }}"
+        Write-Host "- cargo-chef binary: ${{ steps.cache-chef-binary.outputs.cache-hit == 'true' && 'HIT' || 'MISS' }}"
         Write-Host "- cargo registry: Check logs above"
         Write-Host "- cargo target: Check logs above"
         Write-Host "- node_modules: Check logs above"
