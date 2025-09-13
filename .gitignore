@@ -69,7 +69,7 @@ temp/
 # Generated reports
 reports/
 *.pdf
-*.html
+# *.html (commented out to allow index.html)
 *.docx
 
 # Cache
