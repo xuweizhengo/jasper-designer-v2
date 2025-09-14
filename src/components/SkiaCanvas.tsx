@@ -68,8 +68,12 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
       }
     } catch (err) {
       console.error('[SkiaCanvas] Failed to initialize:', err);
-      console.error('[SkiaCanvas] Error stack:', err.stack);
-      setError(err?.toString() || 'Failed to initialize canvas');
+      if (err instanceof Error) {
+        console.error('[SkiaCanvas] Error stack:', err.stack);
+        setError(err.message);
+      } else {
+        setError(String(err) || 'Failed to initialize canvas');
+      }
       setIsLoading(false);
     }
   });
