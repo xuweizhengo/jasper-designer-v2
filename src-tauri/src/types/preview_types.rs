@@ -17,6 +17,7 @@ pub enum OutputFormat {
 
 /// 图片质量设置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageQuality {
     pub dpi: u32,           // 分辨率，默认300
     pub compression: f32,   // 压缩质量 0.0-1.0
@@ -36,6 +37,7 @@ pub enum ColorSpace {
 
 /// PDF特定设置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PdfOptions {
     pub page_size: PageSize,
     pub orientation: Orientation,
@@ -76,6 +78,7 @@ pub struct Margins {
 
 /// Excel导出选项
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExcelOptions {
     pub sheet_name: String,
     pub include_formatting: bool,
@@ -95,6 +98,7 @@ pub enum CellMappingStrategy {
 
 /// 渲染选项
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RenderOptions {
     pub format: OutputFormat,
     pub quality: RenderQuality,
@@ -155,6 +159,7 @@ pub enum DimensionUnit {
 
 /// 预览请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PreviewRequest {
     pub elements: Vec<crate::core::element::ReportElement>,
     pub canvas_config: crate::core::canvas::CanvasConfig,
