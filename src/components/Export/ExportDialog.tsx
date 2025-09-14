@@ -1,5 +1,4 @@
 import { Component, createSignal, Show, For } from 'solid-js';
-import { Portal } from 'solid-js/web';
 import { PreviewAPI } from '../../api/preview';
 import { useAppContext } from '../../stores/AppContext';
 import { save } from '@tauri-apps/api/dialog';
@@ -161,16 +160,15 @@ export const ExportDialog: Component<ExportDialogProps> = (props) => {
 
   return (
     <Show when={props.isOpen}>
-      <Portal>
-        <div class="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div
-            class="absolute inset-0 bg-black/50"
-            onClick={props.onClose}
-          />
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        {/* Backdrop */}
+        <div
+          style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5);"
+          onClick={props.onClose}
+        />
 
-          {/* Dialog */}
-          <div class="relative bg-white rounded-lg shadow-xl p-6 w-[500px] max-h-[80vh] overflow-y-auto">
+        {/* Dialog */}
+        <div style="position: relative; background-color: white; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); padding: 24px; width: 500px; max-width: 90vw; max-height: 80vh; overflow-y: auto;">
             <h2 class="text-xl font-semibold mb-4">导出报表</h2>
 
             {/* Format selection */}
@@ -321,7 +319,7 @@ export const ExportDialog: Component<ExportDialogProps> = (props) => {
             </div>
           </div>
         </div>
-      </Portal>
+      </div>
     </Show>
   );
 };
