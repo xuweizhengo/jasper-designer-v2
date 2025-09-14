@@ -27,16 +27,27 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
   let selectedElement: string | null = null;
 
   onMount(async () => {
+    console.log('[SkiaCanvas] Starting initialization...');
     try {
       // 动态导入 CanvasKit
+      console.log('[SkiaCanvas] Loading CanvasKit module...');
       const CanvasKitInit = (await import('canvaskit-wasm')).default;
+
+      console.log('[SkiaCanvas] Initializing CanvasKit with WASM...');
       canvasKit = await CanvasKitInit({
-        locateFile: (file) => `/canvaskit/${file}`,
+        locateFile: (file) => {
+          const path = `./canvaskit/${file}`;
+          console.log(`[SkiaCanvas] Loading file: ${file} from ${path}`);
+          return path;
+        },
       });
+      console.log('[SkiaCanvas] CanvasKit loaded successfully');
 
       // 创建渲染器
       if (canvasRef) {
+        console.log('[SkiaCanvas] Creating SkiaRenderer...');
         renderer = new SkiaRenderer(canvasKit, canvasRef);
+        console.log('[SkiaCanvas] SkiaRenderer created successfully');
       } else {
         throw new Error('Canvas ref not found');
       }
@@ -45,16 +56,19 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
       props.onReady?.(renderer);
 
       // 初始渲染（即使没有元素也要渲染背景和网格）
+      console.log('[SkiaCanvas] Initial render with', props.elements?.length || 0, 'elements');
       renderer.render(props.elements || [], props.options);
 
       setIsLoading(false);
+      console.log('[SkiaCanvas] Initialization complete');
 
       // 设置交互（仅设计模式）
       if (props.mode === 'design') {
         setupInteractions();
       }
     } catch (err) {
-      console.error('Failed to initialize SkiaCanvas:', err);
+      console.error('[SkiaCanvas] Failed to initialize:', err);
+      console.error('[SkiaCanvas] Error stack:', err.stack);
       setError(err?.toString() || 'Failed to initialize canvas');
       setIsLoading(false);
     }
@@ -168,9 +182,21 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          color: 'red',
+          background: 'rgba(255, 0, 0, 0.9)',
+          color: 'white',
+          padding: '20px',
+          'border-radius': '8px',
+          'max-width': '80%',
+          'z-index': 1000,
+          'font-size': '14px',
+          'box-shadow': '0 4px 6px rgba(0,0,0,0.3)',
         }}>
-          Error: {error()}
+          <div style={{ 'font-weight': 'bold', 'margin-bottom': '10px' }}>
+            ⚠️ SkiaCanvas 初始化错误
+          </div>
+          <div style={{ 'font-family': 'monospace', 'white-space': 'pre-wrap' }}>
+            {error()}
+          </div>
         </div>
       )}
       <canvas
@@ -180,7 +206,8 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
         style={{
           width: '100%',
           height: '100%',
-          display: isLoading() ? 'none' : 'block',
+          display: 'block',  // Always show canvas
+          opacity: isLoading() ? 0.3 : 1,  // Just dim when loading
           cursor: props.mode === 'design' ? 'default' : 'auto',
         }}
       />

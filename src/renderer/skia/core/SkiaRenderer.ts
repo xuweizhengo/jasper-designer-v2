@@ -10,28 +10,44 @@ export class SkiaRenderer {
   private imageCache = new Map<string, any>();
 
   constructor(canvasKit: CanvasKit, canvasElement: HTMLCanvasElement) {
+    console.log('[SkiaRenderer] Constructor called');
+    console.log('[SkiaRenderer] Canvas element:', canvasElement);
+    console.log('[SkiaRenderer] Canvas size:', canvasElement.width, 'x', canvasElement.height);
+
     this.ck = canvasKit;
 
     // 优先使用 WebGL，回退到 CPU
+    console.log('[SkiaRenderer] Trying to create WebGL surface...');
     this.surface = canvasKit.MakeWebGLCanvasSurface(canvasElement);
+
     if (!this.surface) {
-      console.warn('WebGL not available, falling back to CPU rendering');
+      console.warn('[SkiaRenderer] WebGL not available, falling back to CPU rendering');
       this.surface = canvasKit.MakeSWCanvasSurface(canvasElement);
     }
 
     if (!this.surface) {
-      throw new Error('Failed to create Skia surface');
+      console.error('[SkiaRenderer] Failed to create any surface');
+      throw new Error('Failed to create Skia surface - both WebGL and CPU rendering failed');
     }
+    console.log('[SkiaRenderer] Surface created successfully:', this.surface ? 'YES' : 'NO');
 
     this.canvas = this.surface.getCanvas();
+    console.log('[SkiaRenderer] Canvas obtained from surface');
+
     // @ts-ignore - FontMgr API variations
     this.fontManager = canvasKit.FontMgr?.RefDefault?.() || canvasKit.FontMgr?.RefEmpty?.();
+    console.log('[SkiaRenderer] Font manager initialized');
+    console.log('[SkiaRenderer] Initialization complete');
   }
 
   // 主渲染函数
   render(elements: RenderElement[], options: RenderOptions = {}) {
+    console.log('[SkiaRenderer] Render called with', elements.length, 'elements');
+    console.log('[SkiaRenderer] Options:', options);
+
     // 清空画布
     const clearColor = this.parseColor(options.background || '#ffffff');
+    console.log('[SkiaRenderer] Clearing canvas with color:', options.background || '#ffffff');
     this.canvas.clear(clearColor);
 
     // 应用视口变换
@@ -58,6 +74,7 @@ export class SkiaRenderer {
 
     // 刷新到屏幕
     this.surface?.flush();
+    console.log('[SkiaRenderer] Render complete and flushed');
   }
 
   private renderElement(element: RenderElement) {
