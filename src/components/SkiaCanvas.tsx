@@ -103,7 +103,7 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
 
     // 鼠标按下
     canvasRef.addEventListener('mousedown', (e) => {
-      const rect = canvasRef.getBoundingClientRect();
+      const rect = canvasRef!.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 

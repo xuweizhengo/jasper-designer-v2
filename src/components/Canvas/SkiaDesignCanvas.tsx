@@ -229,7 +229,6 @@ export const SkiaDesignCanvas: Component = () => {
 
       {/* Skia 渲染画布 */}
       <div class="absolute inset-0">
-        {console.log('[SkiaDesignCanvas] About to render SkiaCanvas')}
         <SkiaCanvas
           elements={convertToRenderElements(state.elements)}
           mode={previewState().mode === 'design' ? 'design' : 'preview'}
