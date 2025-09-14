@@ -319,7 +319,6 @@ export const ExportDialog: Component<ExportDialogProps> = (props) => {
             </div>
           </div>
         </div>
-      </div>
     </Show>
   );
 };
