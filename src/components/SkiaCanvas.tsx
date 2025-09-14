@@ -44,10 +44,8 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
       // 通知父组件
       props.onReady?.(renderer);
 
-      // 初始渲染
-      if (props.elements && props.elements.length > 0) {
-        renderer.render(props.elements, props.options);
-      }
+      // 初始渲染（即使没有元素也要渲染背景和网格）
+      renderer.render(props.elements || [], props.options);
 
       setIsLoading(false);
 
@@ -64,9 +62,9 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
 
   // 响应式更新
   createEffect(() => {
-    if (renderer && props.elements && !isLoading()) {
+    if (renderer && !isLoading()) {
       try {
-        renderer.render(props.elements, props.options);
+        renderer.render(props.elements || [], props.options);
       } catch (err) {
         console.error('Render error:', err);
       }
