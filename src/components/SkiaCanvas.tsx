@@ -15,11 +15,15 @@ interface SkiaCanvasProps {
 }
 
 export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
+  console.log('[SkiaCanvas] Component created with props:', props);
+
   let canvasRef: HTMLCanvasElement | undefined;
   let renderer: SkiaRenderer | null = null;
   let canvasKit: CanvasKit | null = null;
   const [isLoading, setIsLoading] = createSignal(true);
   const [error, setError] = createSignal<string>('');
+
+  console.log('[SkiaCanvas] Initial state - isLoading:', isLoading(), 'error:', error());
 
   // 鼠标交互状态
   let isDragging = false;
@@ -28,6 +32,10 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
 
   onMount(async () => {
     console.log('[SkiaCanvas] Starting initialization...');
+
+    // 立即显示一个测试消息，确认 onMount 被调用
+    setError('Testing: onMount called successfully');
+
     try {
       // 动态导入 CanvasKit
       console.log('[SkiaCanvas] Loading CanvasKit module...');
@@ -167,6 +175,8 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
     renderer?.dispose();
   });
 
+  console.log('[SkiaCanvas] Rendering component - isLoading:', isLoading(), 'error:', error());
+
   return (
     <div class="skia-canvas-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
       {isLoading() && (
@@ -204,7 +214,10 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
         </div>
       )}
       <canvas
-        ref={canvasRef!}
+        ref={(el) => {
+          console.log('[SkiaCanvas] Canvas ref callback, element:', el);
+          canvasRef = el;
+        }}
         width={props.width || 1200}
         height={props.height || 800}
         style={{

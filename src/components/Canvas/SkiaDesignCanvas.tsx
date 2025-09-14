@@ -13,6 +13,8 @@ import type { Point } from '../../interaction/types/geometry-types';
  * 替换原有的 SVG 渲染系统，使用 Skia 进行高性能渲染
  */
 export const SkiaDesignCanvas: Component = () => {
+  console.log('[SkiaDesignCanvas] Component created');
+
   const {
     state,
     selectElement,
@@ -212,6 +214,10 @@ export const SkiaDesignCanvas: Component = () => {
     }
   };
 
+  console.log('[SkiaDesignCanvas] Rendering with', state.elements.length, 'elements');
+  console.log('[SkiaDesignCanvas] Canvas config:', state.canvas_config);
+  console.log('[SkiaDesignCanvas] Container size:', canvasSize());
+
   return (
     <div ref={containerRef} class="flex-1 relative overflow-hidden bg-tertiary">
       {/* 对齐工具栏 */}
@@ -223,6 +229,7 @@ export const SkiaDesignCanvas: Component = () => {
 
       {/* Skia 渲染画布 */}
       <div class="absolute inset-0">
+        {console.log('[SkiaDesignCanvas] About to render SkiaCanvas')}
         <SkiaCanvas
           elements={convertToRenderElements(state.elements)}
           mode={previewState().mode === 'design' ? 'design' : 'preview'}
