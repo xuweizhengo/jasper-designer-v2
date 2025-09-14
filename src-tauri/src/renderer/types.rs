@@ -7,6 +7,12 @@ pub struct Point {
     pub y: f32,
 }
 
+impl Point {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transform {
@@ -84,4 +90,42 @@ pub struct ExportOptions {
     pub dpi: Option<u32>,
     pub width: Option<i32>,
     pub height: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Viewport {
+    pub x: Option<f32>,
+    pub y: Option<f32>,
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    pub zoom: Option<f32>,
+    pub pan: Option<Point>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Overlay {
+    pub overlay_type: String,
+    pub data: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RenderQuality {
+    Draft,
+    Normal,
+    High,
+    Print,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderOptions {
+    pub viewport: Option<Viewport>,
+    pub quality: Option<RenderQuality>,
+    pub background: Option<String>,
+    pub overlays: Option<Vec<Overlay>>,
+    pub show_grid: Option<bool>,
+    pub grid_size: Option<i32>,
 }
