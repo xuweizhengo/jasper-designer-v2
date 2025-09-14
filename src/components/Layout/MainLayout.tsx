@@ -5,6 +5,7 @@ import Toolbar from '../Toolbar/Toolbar';
 import ComponentLibrary from '../Panels/ComponentLibrary';
 import PropertiesPanel from '../Panels/PropertiesPanel';
 import CanvasWithInteraction from '../Canvas/CanvasWithInteraction'; // 使用新的交互系统Canvas
+import { SkiaDesignCanvas } from '../Canvas/SkiaDesignCanvas'; // Skia 渲染画布
 import PreviewRenderer from '../Preview/PreviewRenderer'; // 导入预览渲染器
 // import TestPanel from '../Debug/TestPanel'; // 移除测试面板
 import { DataSourcesPanel } from '../Panels/DataSourcesPanel';
@@ -76,7 +77,8 @@ const MainLayoutContent: Component = () => {
             
             {/* Center Panel - Canvas */}
             <div class="flex-1 flex flex-col bg-tertiary">
-              <CanvasWithInteraction />
+              {/* 使用 Skia 渲染画布替代原有的 SVG 画布 */}
+              <SkiaDesignCanvas />
             </div>
             
             {/* Right Panel - Properties and Data Context */}
