@@ -1,6 +1,6 @@
 import { Component, createSignal } from 'solid-js';
-import { SkiaCanvas } from '@/components/SkiaCanvas';
-import type { RenderElement } from '@/renderer/types';
+import { SkiaCanvas } from '../components/SkiaCanvas';
+import type { RenderElement } from '../renderer/types';
 
 export const SkiaTest: Component = () => {
   const [elements, setElements] = createSignal<RenderElement[]>([
@@ -104,7 +104,7 @@ export const SkiaTest: Component = () => {
           onElementDrag={handleElementDrag}
         />
       </div>
-      <div style={{ marginTop: '20px' }}>
+      <div style={{ 'margin-top': '20px' }}>
         <button onClick={() => {
           console.log('Current elements:', elements());
         }}>

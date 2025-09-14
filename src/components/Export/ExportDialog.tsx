@@ -167,7 +167,7 @@ export const ExportDialog: Component<ExportDialogProps> = (props) => {
 
       setExportProgress(100);
 
-      console.log('✅ 导出成功:', result);
+      console.log('✅ 导出成功');
 
       // Close dialog after success
       setTimeout(() => {

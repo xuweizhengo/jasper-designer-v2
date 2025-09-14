@@ -1,7 +1,7 @@
 import { Component, onMount, onCleanup, createEffect, createSignal } from 'solid-js';
 import type { CanvasKit } from 'canvaskit-wasm';
-import { SkiaRenderer } from '@/renderer/skia/core/SkiaRenderer';
-import type { RenderElement, RenderOptions } from '@/renderer/types';
+import { SkiaRenderer } from '../renderer/skia/core/SkiaRenderer';
+import type { RenderElement, RenderOptions } from '../renderer/types';
 
 interface SkiaCanvasProps {
   elements: RenderElement[];
@@ -15,7 +15,7 @@ interface SkiaCanvasProps {
 }
 
 export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
-  let canvasRef: HTMLCanvasElement;
+  let canvasRef: HTMLCanvasElement | undefined;
   let renderer: SkiaRenderer | null = null;
   let canvasKit: CanvasKit | null = null;
   const [isLoading, setIsLoading] = createSignal(true);
@@ -35,7 +35,11 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
       });
 
       // 创建渲染器
-      renderer = new SkiaRenderer(canvasKit, canvasRef);
+      if (canvasRef) {
+        renderer = new SkiaRenderer(canvasKit, canvasRef);
+      } else {
+        throw new Error('Canvas ref not found');
+      }
 
       // 通知父组件
       props.onReady?.(renderer);
@@ -119,7 +123,7 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
     // 反向遍历（从上到下）
     for (let i = props.elements.length - 1; i >= 0; i--) {
       const elem = props.elements[i];
-      if (!elem.visible || elem.locked) continue;
+      if (!elem || !elem.visible || elem.locked) continue;
 
       const bounds = getElementBounds(elem);
       if (

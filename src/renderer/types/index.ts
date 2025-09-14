@@ -54,11 +54,12 @@ export type BlendMode =
   | 'lighten';
 
 export interface Viewport {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  zoom: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  zoom?: number;
+  pan?: Point;
 }
 
 export interface Overlay {
@@ -71,6 +72,8 @@ export interface RenderOptions {
   quality?: RenderQuality;
   background?: string;
   overlays?: Overlay[];
+  showGrid?: boolean;
+  gridSize?: number;
 }
 
 export type RenderQuality = 'draft' | 'normal' | 'high' | 'print';
@@ -90,8 +93,8 @@ export function convertFromReportElement(element: any): RenderElement {
     type: mapElementType(element.type),
     transform: {
       translate: { x: element.position.x, y: element.position.y },
-      scale: element.scale ? { x: element.scale.x, y: element.scale.y } : undefined,
-      rotate: element.rotation,
+      ...(element.scale && { scale: { x: element.scale.x, y: element.scale.y } }),
+      ...(element.rotation !== undefined && { rotate: element.rotation }),
     },
     style: {
       width: element.size.width,

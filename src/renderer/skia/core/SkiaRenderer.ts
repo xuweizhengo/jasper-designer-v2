@@ -1,9 +1,9 @@
-import type { CanvasKit, Canvas, Surface, Paint, Font, Paragraph } from 'canvaskit-wasm';
-import type { RenderElement, RenderOptions, Transform, ElementStyle } from '@/renderer/types';
+import type { CanvasKit, Canvas, Surface } from 'canvaskit-wasm';
+import type { RenderElement, RenderOptions, Transform } from '../../types';
 
 export class SkiaRenderer {
   private ck: CanvasKit;
-  private surface: Surface;
+  private surface: Surface | null;
   private canvas: Canvas;
   private fontManager: any;
   private elementCache = new Map<string, any>();
@@ -24,7 +24,8 @@ export class SkiaRenderer {
     }
 
     this.canvas = this.surface.getCanvas();
-    this.fontManager = canvasKit.FontMgr.RefDefault();
+    // @ts-ignore - FontMgr API variations
+    this.fontManager = canvasKit.FontMgr?.RefDefault?.() || canvasKit.FontMgr?.RefEmpty?.();
   }
 
   // 主渲染函数
@@ -36,6 +37,11 @@ export class SkiaRenderer {
     // 应用视口变换
     if (options.viewport) {
       this.applyViewport(options.viewport);
+    }
+
+    // 渲染网格（设计模式）
+    if (options.showGrid) {
+      this.renderGrid(options.gridSize || 20);
     }
 
     // 渲染所有元素
@@ -51,7 +57,7 @@ export class SkiaRenderer {
     }
 
     // 刷新到屏幕
-    this.surface.flush();
+    this.surface?.flush();
   }
 
   private renderElement(element: RenderElement) {
@@ -64,7 +70,8 @@ export class SkiaRenderer {
 
     // 应用样式
     if (element.style.opacity !== undefined && element.style.opacity < 1) {
-      this.canvas.saveLayerAlpha(null, element.style.opacity * 255);
+      // @ts-ignore - saveLayerAlpha may not be in type definitions
+      this.canvas.saveLayerAlpha?.(null, element.style.opacity * 255) || this.canvas.saveLayer(null, this.createOpacityPaint(element.style.opacity));
     }
 
     // 根据类型渲染
@@ -97,7 +104,7 @@ export class SkiaRenderer {
   }
 
   private renderText(element: RenderElement) {
-    const { content, fontSize = 14, fontFamily = 'Arial', color = '#000000', align = 'left' } = element.data;
+    const { content, fontSize = 14, fontFamily = 'Arial', color = '#000000' } = element.data;
 
     if (!content) return;
 
@@ -106,7 +113,8 @@ export class SkiaRenderer {
     paint.setAntiAlias(true);
 
     // 创建字体
-    const typeface = this.fontManager.matchFamilyStyle(fontFamily, this.ck.FontStyle.Normal);
+    // @ts-ignore - FontStyle API variations
+    const typeface = this.fontManager.matchFamilyStyle(fontFamily, this.ck.FontStyle?.Normal || 0);
     const font = new this.ck.Font(typeface, fontSize);
 
     // 简单文本渲染
@@ -272,6 +280,38 @@ export class SkiaRenderer {
     }
   }
 
+  // 渲染网格背景
+  private renderGrid(gridSize: number) {
+    const paint = new this.ck.Paint();
+    paint.setStyle(this.ck.PaintStyle.Stroke);
+    paint.setColor(this.parseColor('#e0e0e0'));
+    paint.setStrokeWidth(0.5);
+    paint.setAntiAlias(true);
+
+    const width = this.surface?.width() || 1200;
+    const height = this.surface?.height() || 800;
+
+    // 垂直线
+    for (let x = 0; x <= width; x += gridSize) {
+      const path = new this.ck.Path();
+      path.moveTo(x, 0);
+      path.lineTo(x, height);
+      this.canvas.drawPath(path, paint);
+      path.delete();
+    }
+
+    // 水平线
+    for (let y = 0; y <= height; y += gridSize) {
+      const path = new this.ck.Path();
+      path.moveTo(0, y);
+      path.lineTo(width, y);
+      this.canvas.drawPath(path, paint);
+      path.delete();
+    }
+
+    paint.delete();
+  }
+
   // 渲染叠加层（设计模式用）
   private renderOverlays(overlays: any[]) {
     for (const overlay of overlays) {
@@ -342,7 +382,7 @@ export class SkiaRenderer {
     paint.delete();
   }
 
-  private renderRulerOverlay(overlay: any) {
+  private renderRulerOverlay(_overlay: any) {
     // 标尺渲染逻辑
   }
 
@@ -358,6 +398,13 @@ export class SkiaRenderer {
     }
     // 默认黑色
     return this.ck.Color4f(0, 0, 0, 1);
+  }
+
+  // 创建透明度画笔
+  private createOpacityPaint(opacity: number) {
+    const paint = new this.ck.Paint();
+    paint.setAlphaf(opacity);
+    return paint;
   }
 
   private applyTransform(transform: Transform) {
@@ -394,7 +441,8 @@ export class SkiaRenderer {
   }
 
   // 导出功能
-  async exportToPNG(): Promise<Uint8Array> {
+  async exportToPNG(): Promise<Uint8Array | null> {
+    if (!this.surface) return null;
     const image = this.surface.makeImageSnapshot();
     const bytes = image.encodeToBytes();
     image.delete();
