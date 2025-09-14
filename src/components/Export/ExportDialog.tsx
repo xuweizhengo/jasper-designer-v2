@@ -2,6 +2,7 @@ import { Component, createSignal, Show, For } from 'solid-js';
 import { PreviewAPI } from '../../api/preview';
 import { useAppContext } from '../../stores/AppContext';
 import { save } from '@tauri-apps/api/dialog';
+import { invoke } from '@tauri-apps/api/tauri';
 import type {
   OutputFormat,
   RenderOptions,
@@ -9,6 +10,7 @@ import type {
   PreviewRequest,
   Orientation
 } from '../../types/preview';
+import { convertFromReportElement } from '../../renderer/types';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -136,8 +138,32 @@ export const ExportDialog: Component<ExportDialogProps> = (props) => {
 
       setExportProgress(30);
 
-      // Export to file
-      const result = await PreviewAPI.exportToFile(request, filePath);
+      // 使用新的 Skia 导出功能
+      const useSkiaExport = true; // 可以添加一个开关来切换
+
+      if (useSkiaExport) {
+        // 转换元素格式为 Skia 格式
+        const skiaElements = state.elements.map(convertFromReportElement);
+
+        // 调用 Skia 导出
+        const result = await invoke('export_with_skia', {
+          elements: skiaElements,
+          filePath: filePath,
+          options: {
+            format: selectedFormat(),
+            quality: selectedFormat() === 'jpg' ? Math.round(imageCompression() * 100) : undefined,
+            dpi: dpi(),
+            width: state.canvas_config.width,
+            height: state.canvas_config.height,
+          }
+        });
+
+        console.log('✅ Skia 导出成功:', result);
+      } else {
+        // 使用原有的导出功能
+        const result = await PreviewAPI.exportToFile(request, filePath);
+        console.log('✅ 原有导出成功:', result);
+      }
 
       setExportProgress(100);
 

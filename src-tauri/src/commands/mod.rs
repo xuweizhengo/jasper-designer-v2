@@ -3,6 +3,7 @@ pub mod canvas;
 pub mod history;
 pub mod file;
 pub mod template;
+pub mod render;
 
 // Debug commands
 #[tauri::command]

@@ -7,6 +7,7 @@ mod errors;
 mod data;
 mod preview;
 mod types;
+mod renderer;
 
 use tauri::Manager;
 use std::sync::Arc;
@@ -131,6 +132,9 @@ async fn main() {
             data::commands::execute_database_preview,
             data::commands::explain_query,
             data::commands::get_table_sample,
+            // Skia rendering commands
+            commands::render::export_with_skia,
+            commands::render::render_preview_skia,
             // data::commands::get_table_sample,
         ])
         .setup(|app| {
