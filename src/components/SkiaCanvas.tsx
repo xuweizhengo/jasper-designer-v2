@@ -33,9 +33,6 @@ export const SkiaCanvas: Component<SkiaCanvasProps> = (props) => {
   onMount(async () => {
     console.log('[SkiaCanvas] Starting initialization...');
 
-    // 立即显示一个测试消息，确认 onMount 被调用
-    setError('Testing: onMount called successfully');
-
     try {
       // 动态导入 CanvasKit
       console.log('[SkiaCanvas] Loading CanvasKit module...');

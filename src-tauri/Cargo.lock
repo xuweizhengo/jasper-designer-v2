@@ -2094,6 +2094,7 @@ dependencies = [
  "log",
  "moka",
  "mysql",
+ "once_cell",
  "printpdf",
  "regex",
  "resvg",

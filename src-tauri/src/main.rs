@@ -135,7 +135,17 @@ async fn main() {
             // Skia rendering commands
             commands::render::export_with_skia,
             commands::render::render_preview_skia,
-            // data::commands::get_table_sample,
+            // New Skia export commands
+            commands::skia_export::init_skia_renderer,
+            commands::skia_export::dispose_skia_renderer,
+            commands::skia_export::render_preview,
+            commands::skia_export::render_offscreen,
+            commands::skia_export::export_image,
+            commands::skia_export::export_pdf,
+            commands::skia_export::export_svg,
+            commands::skia_export::export_office,
+            commands::skia_export::prepare_print,
+            commands::skia_export::set_render_quality,
         ])
         .setup(|app| {
             let window = app.get_window("main").unwrap();

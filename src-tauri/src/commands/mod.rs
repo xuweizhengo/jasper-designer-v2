@@ -4,6 +4,7 @@ pub mod history;
 pub mod file;
 pub mod template;
 pub mod render;
+pub mod skia_export;
 
 // Debug commands
 #[tauri::command]
