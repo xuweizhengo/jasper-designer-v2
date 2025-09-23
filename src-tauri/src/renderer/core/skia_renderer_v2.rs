@@ -4,10 +4,11 @@ use skia_safe::{
     Color, Color4f, Data, Image, ImageInfo, ColorType, AlphaType,
     Rect, Point as SkPoint, Size, Matrix, PathEffect, RRect,
     EncodedImageFormat, TextBlob, Typeface, Document,
-    ClipOp, BlendMode as SkBlendMode, FilterQuality,
-    gradient_shader::GradientShader, Shader, TileMode,
-    PathDirection, PathFillType, StrokeJoin, StrokeCap,
-    TextAlign, TextEncoding, FontMetrics,
+    ClipOp, BlendMode as SkBlendMode,
+    gradient_shader, Shader, TileMode,
+    PathDirection, PathFillType,
+    paint::{Join as StrokeJoin, Cap as StrokeCap},
+    FontMetrics,
 };
 use crate::renderer::types::{
     RenderElement, RenderOptions, Transform, ElementType, ElementStyle,
@@ -176,10 +177,10 @@ impl SkiaRendererV2 {
 
         // 设置文本对齐
         let text_align = style.text_align.as_deref().unwrap_or("left");
-        let (x_offset, align) = match text_align {
-            "center" => (element.size.width / 2.0, TextAlign::Center),
-            "right" => (element.size.width, TextAlign::Right),
-            _ => (0.0, TextAlign::Left),
+        let x_offset = match text_align {
+            "center" => element.size.width / 2.0,
+            "right" => element.size.width,
+            _ => 0.0,
         };
 
         // 处理多行文本
@@ -383,7 +384,8 @@ impl SkiaRendererV2 {
 
             let mut paint = Paint::default();
             paint.set_anti_alias(true);
-            paint.set_filter_quality(FilterQuality::High);
+            // FilterQuality is removed in newer skia-safe versions
+            // paint.set_filter_quality(FilterQuality::High);
 
             canvas.draw_image_rect(image, Some((&src_rect, SkPoint::default())), &dst_rect, &paint);
         } else {
@@ -558,7 +560,7 @@ impl SkiaRendererV2 {
 
         let positions = vec![0.0, 1.0];
 
-        let shader = GradientShader::linear(
+        let shader = gradient_shader::linear(
             (
                 SkPoint::new(rect.x(), rect.y()),
                 SkPoint::new(rect.x() + rect.width(), rect.y()),

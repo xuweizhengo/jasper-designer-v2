@@ -347,7 +347,7 @@ pub async fn set_render_quality(quality: String) -> Result<(), String> {
 // ===== 辅助函数 =====
 
 fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::types::RenderElement> {
-    use crate::renderer::types::{RenderElement, ElementType, Position, Size, Style};
+    use crate::renderer::types::{RenderElement, ElementType};
 
     elements.into_iter().map(|el| {
         RenderElement {
