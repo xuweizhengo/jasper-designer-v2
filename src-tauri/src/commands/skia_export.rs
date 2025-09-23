@@ -347,41 +347,55 @@ pub async fn set_render_quality(quality: String) -> Result<(), String> {
 // ===== 辅助函数 =====
 
 fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::types::RenderElement> {
-    use crate::renderer::types::{RenderElement, ElementType};
+    use crate::renderer::types::{RenderElement, ElementType, Transform, ElementStyle, Shadow, BlendMode, Point};
 
     elements.into_iter().map(|el| {
         RenderElement {
             id: el.id,
             element_type: match el.r#type.as_str() {
                 "text" => ElementType::Text,
-                "rect" => ElementType::Rectangle,
-                "circle" => ElementType::Ellipse,
-                "line" => ElementType::Line,
+                "rect" => ElementType::Rect,
+                "circle" => ElementType::Circle,
+                "path" => ElementType::Path,
                 "image" => ElementType::Image,
                 _ => ElementType::Group,
             },
-            position: Position {
-                x: el.bounds.x,
-                y: el.bounds.y,
+            transform: Transform {
+                translate: Some(Point { x: el.bounds.x, y: el.bounds.y }),
+                scale: el.transform.as_ref().and_then(|t| t.scale.clone()).map(|s| Point { x: s.x, y: s.y }),
+                rotate: el.transform.as_ref().and_then(|t| t.rotation),
+                origin: None,
             },
-            size: Size {
-                width: el.bounds.width,
-                height: el.bounds.height,
-            },
-            style: Style {
-                fill_color: el.style.fill_color,
-                stroke_color: el.style.stroke_color,
+            style: ElementStyle {
+                width: Some(el.bounds.width),
+                height: Some(el.bounds.height),
+                fill: el.style.fill_color.clone(),
+                stroke: el.style.stroke_color.clone(),
                 stroke_width: el.style.stroke_width,
                 opacity: Some(el.opacity),
-                ..Default::default()
+                blur: el.style.blur,
+                shadow: el.style.shadow.as_ref().map(|s| Shadow {
+                    offset_x: s.offset_x,
+                    offset_y: s.offset_y,
+                    blur: s.blur,
+                    color: s.color.clone(),
+                }),
+                clip_path: None,
+                blend_mode: el.style.blend_mode.as_ref().and_then(|mode| {
+                    match mode.as_str() {
+                        "multiply" => Some(BlendMode::Multiply),
+                        "screen" => Some(BlendMode::Screen),
+                        "overlay" => Some(BlendMode::Overlay),
+                        "darken" => Some(BlendMode::Darken),
+                        "lighten" => Some(BlendMode::Lighten),
+                        _ => Some(BlendMode::Normal),
+                    }
+                }),
             },
-            content: el.data.get("content")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            data: el.data,
             visible: el.visible,
             locked: false,
-            children: vec![],
-            custom_properties: el.data,
+            children: None,
         }
     }).collect()
 }

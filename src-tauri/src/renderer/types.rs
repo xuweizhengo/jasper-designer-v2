@@ -110,7 +110,7 @@ pub struct Overlay {
     pub data: serde_json::Value,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum RenderQuality {
     Draft,
@@ -128,4 +128,5 @@ pub struct RenderOptions {
     pub overlays: Option<Vec<Overlay>>,
     pub show_grid: Option<bool>,
     pub grid_size: Option<i32>,
+    pub watermark: Option<String>,
 }
