@@ -72,6 +72,7 @@ export class CanvasDesignRenderer implements IDesignRenderer {
     if (typeof OffscreenCanvas !== 'undefined' && this.options.enableCaching) {
       this.offscreenCanvas = new OffscreenCanvas(canvas.width, canvas.height);
       // this._offscreenCtx = this.offscreenCanvas.getContext('2d');
+      console.log('OffscreenCanvas created:', this.offscreenCanvas !== null);
     }
 
     // 设置视口

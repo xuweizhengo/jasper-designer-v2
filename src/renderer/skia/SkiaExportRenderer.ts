@@ -27,6 +27,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 export class SkiaExportRenderer implements IExportRenderer {
   private isInitialized = false;
   private quality: 'draft' | 'normal' | 'high' | 'print' = 'normal';
+  private _options: ExportRendererOptions = {};
 
   // 进度回调
   onExportProgress?: (progress: ExportProgress) => void;
@@ -35,7 +36,8 @@ export class SkiaExportRenderer implements IExportRenderer {
 
   async initialize(options?: ExportRendererOptions): Promise<void> {
     console.log('初始化 Skia 导出渲染器...');
-    this.options = options || {};
+    this._options = options || {};
+    console.log('Options initialized:', Object.keys(this._options).length);
 
     try {
       // 调用后端初始化 Skia
@@ -105,7 +107,7 @@ export class SkiaExportRenderer implements IExportRenderer {
       const imageData = await invoke<Uint8Array>('render_preview', renderData);
 
       // 将结果绘制到 Canvas
-      const blob = new Blob([imageData], { type: 'image/png' });
+      const blob = new Blob([imageData as any], { type: 'image/png' });
       const url = URL.createObjectURL(blob);
       const img = new Image();
 
@@ -203,7 +205,7 @@ export class SkiaExportRenderer implements IExportRenderer {
       return blob;
     } catch (error) {
       console.error('图片导出失败:', error);
-      throw this.createExportError('图片导出失败', 'RENDER_FAILED', format, error);
+      throw this.createExportError('图片导出失败', 'RENDER_FAILED', format as ExportFormat, error);
     }
   }
 
@@ -311,7 +313,7 @@ export class SkiaExportRenderer implements IExportRenderer {
         pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       };
 
-      const blob = new Blob([officeData], { type: mimeTypes[format] });
+      const blob = new Blob([officeData as any], { type: mimeTypes[format] });
 
       this.reportProgress(100, 100, '导出完成');
 
@@ -349,7 +351,7 @@ export class SkiaExportRenderer implements IExportRenderer {
       // 串行导出
       for (let i = 0; i < pages.length; i++) {
         try {
-          const blob = await this.exportSinglePage(pages[i], format, i, total);
+          const blob = await this.exportSinglePage(pages[i] || [], format, i, total);
           results.push(blob);
         } catch (error) {
           if (!options?.continueOnError) {
@@ -529,7 +531,7 @@ export class SkiaExportRenderer implements IExportRenderer {
         current,
         total,
         percentage,
-        message,
+        message: message || '',
         estimatedTimeRemaining: this.estimateTimeRemaining(current, total),
       });
     }
@@ -557,7 +559,8 @@ export class SkiaExportRenderer implements IExportRenderer {
       Legal: { width: 816, height: 1344 },
     };
 
-    return sizes[size] || sizes.A4;
+    const result = sizes[size] || sizes['A4'];
+    return result!;
   }
 
   private chunkArray<T>(array: T[], size: number): T[][] {
