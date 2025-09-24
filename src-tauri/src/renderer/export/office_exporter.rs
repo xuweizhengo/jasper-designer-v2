@@ -25,7 +25,8 @@ impl OfficeExporter {
             }
 
             // 根据 Y 坐标分组到行
-            let row = (element.position.y / 20.0) as i32;
+            let y = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+            let row = (y / 20.0) as i32;
             row_elements.entry(row).or_insert_with(Vec::new).push(element);
         }
 
@@ -39,7 +40,9 @@ impl OfficeExporter {
                 // 按 X 坐标排序元素
                 let mut sorted_elements = elements_in_row.clone();
                 sorted_elements.sort_by(|a, b| {
-                    a.position.x.partial_cmp(&b.position.x).unwrap()
+                    let a_x = a.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+                    let b_x = b.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+                    a_x.partial_cmp(&b_x).unwrap()
                 });
 
                 for (col_idx, element) in sorted_elements.iter().enumerate() {
@@ -73,7 +76,9 @@ impl OfficeExporter {
                     let mut format = Format::new();
 
                     // 设置字体
-                    if let Some(font_size) = element.style.font_size {
+                    // Extract font size from data if it's a text element
+                    let font_size = element.data.get("fontSize").and_then(|v| v.as_f64()).map(|f| f as f32);
+                    if let Some(font_size) = font_size {
                         format.set_font_size(font_size);
                     }
 
@@ -82,7 +87,7 @@ impl OfficeExporter {
                     }
 
                     // 设置颜色
-                    if let Some(color) = &element.style.fill_color {
+                    if let Some(color) = &element.style.fill {
                         if let Some(xlsx_color) = Self::parse_color_to_xlsx(color) {
                             format.set_font_color(xlsx_color);
                         }
@@ -102,7 +107,7 @@ impl OfficeExporter {
             }
             ElementType::Rectangle => {
                 // 矩形作为单元格背景
-                if let Some(fill_color) = &element.style.fill_color {
+                if let Some(fill_color) = &element.style.fill {
                     let mut format = Format::new();
                     if let Some(xlsx_color) = Self::parse_color_to_xlsx(fill_color) {
                         format.set_background_color(xlsx_color);
@@ -165,10 +170,10 @@ impl OfficeExporter {
                     if let Some(content) = &element.content {
                         html.push_str(&format!(
                             r#"<div class="element" style="left:{}px; top:{}px; font-size:{}px; color:{};">{}</div>"#,
-                            element.position.x,
-                            element.position.y,
-                            element.style.font_size.unwrap_or(14.0),
-                            element.style.fill_color.as_deref().unwrap_or("#000000"),
+                            element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                            element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                            element.data.get("fontSize").and_then(|v| v.as_f64()).unwrap_or(14.0),
+                            element.style.fill.as_deref().unwrap_or("#000000"),
                             content
                         ));
                     }
@@ -176,11 +181,11 @@ impl OfficeExporter {
                 ElementType::Rectangle => {
                     html.push_str(&format!(
                         r#"<div class="element" style="left:{}px; top:{}px; width:{}px; height:{}px; background-color:{}; border: 1px solid {};"></div>"#,
-                        element.position.x,
-                        element.position.y,
-                        element.size.width,
-                        element.size.height,
-                        element.style.fill_color.as_deref().unwrap_or("transparent"),
+                        element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                        element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                        element.style.width.unwrap_or(100.0),
+                        element.style.height.unwrap_or(100.0),
+                        element.style.fill.as_deref().unwrap_or("transparent"),
                         element.style.stroke_color.as_deref().unwrap_or("transparent")
                     ));
                 }
@@ -190,10 +195,10 @@ impl OfficeExporter {
                             html.push_str(&format!(
                                 r#"<img class="element" src="{}" style="left:{}px; top:{}px; width:{}px; height:{}px;" />"#,
                                 src_str,
-                                element.position.x,
-                                element.position.y,
-                                element.size.width,
-                                element.size.height
+                                element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                                element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                                element.style.width.unwrap_or(100.0),
+                                element.style.height.unwrap_or(100.0)
                             ));
                         }
                     }
@@ -241,10 +246,11 @@ impl OfficeExporter {
         if color.starts_with('#') {
             let hex = color.trim_start_matches('#');
             if hex.len() >= 6 {
-                let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
-                let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
-                let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
-                return Some(XlsxColor::RGB(r, g, b));
+                let r = u32::from_str_radix(&hex[0..2], 16).ok()?;
+                let g = u32::from_str_radix(&hex[2..4], 16).ok()?;
+                let b = u32::from_str_radix(&hex[4..6], 16).ok()?;
+                let rgb = (r << 16) | (g << 8) | b;
+                return Some(XlsxColor::RGB(rgb));
             }
         }
         None
@@ -264,12 +270,17 @@ impl TableExporter {
         // 按位置排序元素
         let mut sorted_elements = elements.to_vec();
         sorted_elements.sort_by(|a, b| {
-            if (a.position.y - b.position.y).abs() < 5.0 {
+            let a_y = a.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+            let b_y = b.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+            let a_x = a.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+            let b_x = b.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+
+            if (a_y - b_y).abs() < 5.0 {
                 // 同一行，按 X 排序
-                a.position.x.partial_cmp(&b.position.x).unwrap()
+                a_x.partial_cmp(&b_x).unwrap()
             } else {
                 // 不同行，按 Y 排序
-                a.position.y.partial_cmp(&b.position.y).unwrap()
+                a_y.partial_cmp(&b_y).unwrap()
             }
         });
 
@@ -279,19 +290,25 @@ impl TableExporter {
             }
 
             // 检查是否换行
-            if (element.position.y - last_y).abs() > 20.0 && !current_row.is_empty() {
+            let element_y = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+            if (element_y - last_y).abs() > 20.0 && !current_row.is_empty() {
                 table.push(current_row.clone());
                 current_row.clear();
             }
 
             // 添加内容到当前行
-            if let Some(content) = &element.content {
-                current_row.push(content.clone());
+            // 从 data 字段中提取文本内容
+            let content = if element.element_type == ElementType::Text {
+                element.data.get("text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string()
             } else {
-                current_row.push(String::new());
-            }
+                String::new()
+            };
+            current_row.push(content);
 
-            last_y = element.position.y;
+            last_y = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
         }
 
         // 添加最后一行

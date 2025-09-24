@@ -62,13 +62,13 @@ impl SkiaRendererV2 {
 
     /// 带选项的渲染函数
     pub fn render_with_options(&mut self, elements: &[RenderElement], options: Option<&RenderOptions>) -> Result<()> {
-        let canvas = self.surface.canvas();
-
-        // 清空画布
+        // 清空画布 - 先解析颜色，再获取 canvas
         let bg_color = options
             .and_then(|o| o.background.as_ref())
             .map(|c| self.parse_color(c))
             .unwrap_or(Color::WHITE);
+
+        let canvas = self.surface.canvas();
         canvas.clear(bg_color);
 
         // 设置抗锯齿
@@ -78,21 +78,22 @@ impl SkiaRendererV2 {
         // 渲染网格（如果启用）
         if let Some(opts) = options {
             if opts.show_grid.unwrap_or(false) {
-                self.render_grid(canvas, opts.grid_size.unwrap_or(20));
+                let grid_size = opts.grid_size.unwrap_or(20);
+                self.render_grid(canvas, grid_size);
             }
         }
 
         // 渲染所有元素
         for element in elements {
             if element.visible {
-                self.render_element(canvas, element)?;
+                self.render_element_internal(canvas, element)?;
             }
         }
 
         // 渲染水印（如果有）
         if let Some(opts) = options {
             if let Some(watermark) = &opts.watermark {
-                self.render_watermark(canvas, watermark);
+                self.render_watermark_internal(canvas, watermark);
             }
         }
 
@@ -100,7 +101,7 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染单个元素（使用传入的 Canvas）
-    fn render_element(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+    fn render_element_internal(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
         canvas.save();
 
         // 应用变换
@@ -133,7 +134,7 @@ impl SkiaRendererV2 {
             ElementType::Group => {
                 for child in &element.children {
                     if child.visible {
-                        self.render_element(canvas, child)?;
+                        self.render_element_internal(canvas, child)?;
                     }
                 }
             }
@@ -149,16 +150,26 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染文本（增强版）
-    fn render_text(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
-        let content = element.content.as_deref().unwrap_or("");
+    fn render_text(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+        // 从 data 字段获取文本内容
+        let content = element.data.get("text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         if content.is_empty() {
             return Ok(());
         }
 
         let style = &element.style;
-        let font_size = style.font_size.unwrap_or(14.0) as scalar;
-        let font_family = style.font_family.as_deref().unwrap_or("Arial");
-        let font_weight = style.font_weight.as_deref().unwrap_or("normal");
+        // 从 data 字段获取字体属性
+        let font_size = element.data.get("fontSize")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(14.0) as scalar;
+        let font_family = element.data.get("fontFamily")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Arial");
+        let font_weight = element.data.get("fontWeight")
+            .and_then(|v| v.as_str())
+            .unwrap_or("normal");
 
         // 获取或创建字体
         let typeface = self.get_or_create_typeface(font_family, font_weight);
@@ -169,33 +180,41 @@ impl SkiaRendererV2 {
         paint.set_anti_alias(true);
 
         // 设置颜色
-        if let Some(color) = &style.fill_color {
+        if let Some(color) = &style.fill {
             paint.set_color(self.parse_color(color));
         } else {
             paint.set_color(Color::BLACK);
         }
 
         // 设置文本对齐
-        let text_align = style.text_align.as_deref().unwrap_or("left");
+        let text_align = element.data.get("textAlign")
+            .and_then(|v| v.as_str())
+            .unwrap_or("left");
+        let width = style.width.unwrap_or(100.0);
         let x_offset = match text_align {
-            "center" => element.size.width / 2.0,
-            "right" => element.size.width,
+            "center" => width / 2.0,
+            "right" => width,
             _ => 0.0,
         };
 
         // 处理多行文本
-        let line_height = style.line_height.unwrap_or(1.2) * font_size;
+        let line_height = element.data.get("lineHeight")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.2) as f32 * font_size;
         let lines: Vec<&str> = content.split('\n').collect();
 
+        let position_x = element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+        let position_y = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+
         for (i, line) in lines.iter().enumerate() {
-            let y = element.position.y + (i as f32 + 1.0) * line_height;
-            let x = element.position.x + x_offset;
+            let y = position_y + (i as f32 + 1.0) * line_height;
+            let x = position_x + x_offset;
 
             canvas.draw_str(line, SkPoint::new(x, y), &font, &paint);
         }
 
         // 渲染文本装饰（下划线、删除线）
-        if let Some(decoration) = &style.text_decoration {
+        if let Some(decoration) = element.data.get("textDecoration").and_then(|v| v.as_str()) {
             self.render_text_decoration(canvas, element, &font, &paint, decoration);
         }
 
@@ -203,16 +222,21 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染矩形（增强版）
-    fn render_rectangle(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+    fn render_rectangle(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+        let position_x = element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0);
+        let position_y = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
+        let width = element.style.width.unwrap_or(100.0);
+        let height = element.style.height.unwrap_or(100.0);
+
         let rect = Rect::from_xywh(
-            element.position.x,
-            element.position.y,
-            element.size.width,
-            element.size.height,
+            position_x,
+            position_y,
+            width,
+            height,
         );
 
         // 处理圆角
-        let rounded_rect = if let Some(radius) = element.style.border_radius {
+        let rounded_rect = if let Some(radius) = element.data.get("borderRadius").and_then(|v| v.as_f64()).map(|f| f as f32) {
             RRect::new_rect_xy(rect, radius, radius)
         } else {
             RRect::new_rect(rect)
@@ -222,7 +246,7 @@ impl SkiaRendererV2 {
         paint.set_anti_alias(true);
 
         // 填充
-        if let Some(fill) = &element.style.fill_color {
+        if let Some(fill) = &element.style.fill {
             paint.set_style(PaintStyle::Fill);
 
             // 支持渐变填充
@@ -236,13 +260,13 @@ impl SkiaRendererV2 {
         }
 
         // 描边
-        if let Some(stroke) = &element.style.stroke_color {
+        if let Some(stroke) = &element.style.stroke {
             paint.set_style(PaintStyle::Stroke);
             paint.set_color(self.parse_color(stroke));
             paint.set_stroke_width(element.style.stroke_width.unwrap_or(1.0));
 
             // 设置线条样式
-            if let Some(dash_array) = &element.style.stroke_dash_array {
+            if let Some(dash_array) = element.data.get("strokeDashArray").and_then(|v| v.as_str()) {
                 self.apply_dash_effect(&mut paint, dash_array);
             }
 
@@ -253,41 +277,41 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染椭圆
-    fn render_ellipse(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+    fn render_ellipse(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
         let center = SkPoint::new(
-            element.position.x + element.size.width / 2.0,
-            element.position.y + element.size.height / 2.0,
+            element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0) + element.style.width.unwrap_or(100.0) / 2.0,
+            element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0) + element.style.height.unwrap_or(100.0) / 2.0,
         );
 
         let mut paint = Paint::default();
         paint.set_anti_alias(true);
 
         // 填充
-        if let Some(fill) = &element.style.fill_color {
+        if let Some(fill) = &element.style.fill {
             paint.set_style(PaintStyle::Fill);
             paint.set_color(self.parse_color(fill));
             canvas.draw_oval(
                 &Rect::from_xywh(
-                    element.position.x,
-                    element.position.y,
-                    element.size.width,
-                    element.size.height,
+                    element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                    element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                    element.style.width.unwrap_or(100.0),
+                    element.style.height.unwrap_or(100.0),
                 ),
                 &paint,
             );
         }
 
         // 描边
-        if let Some(stroke) = &element.style.stroke_color {
+        if let Some(stroke) = &element.style.stroke {
             paint.set_style(PaintStyle::Stroke);
             paint.set_color(self.parse_color(stroke));
             paint.set_stroke_width(element.style.stroke_width.unwrap_or(1.0));
             canvas.draw_oval(
                 &Rect::from_xywh(
-                    element.position.x,
-                    element.position.y,
-                    element.size.width,
-                    element.size.height,
+                    element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                    element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                    element.style.width.unwrap_or(100.0),
+                    element.style.height.unwrap_or(100.0),
                 ),
                 &paint,
             );
@@ -297,18 +321,18 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染线条
-    fn render_line(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
-        let start = SkPoint::new(element.position.x, element.position.y);
+    fn render_line(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+        let start = SkPoint::new(element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0), element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0));
         let end = SkPoint::new(
-            element.position.x + element.size.width,
-            element.position.y + element.size.height,
+            element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0) + element.style.width.unwrap_or(100.0),
+            element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0) + element.style.height.unwrap_or(100.0),
         );
 
         let mut paint = Paint::default();
         paint.set_anti_alias(true);
         paint.set_style(PaintStyle::Stroke);
 
-        if let Some(stroke) = &element.style.stroke_color {
+        if let Some(stroke) = &element.style.stroke {
             paint.set_color(self.parse_color(stroke));
         } else {
             paint.set_color(Color::BLACK);
@@ -326,7 +350,7 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染路径
-    fn render_path(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+    fn render_path(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
         let mut path = Path::new();
 
         // 解析路径数据（SVG 路径格式）
@@ -340,14 +364,14 @@ impl SkiaRendererV2 {
         paint.set_anti_alias(true);
 
         // 填充
-        if let Some(fill) = &element.style.fill_color {
+        if let Some(fill) = &element.style.fill {
             paint.set_style(PaintStyle::Fill);
             paint.set_color(self.parse_color(fill));
             canvas.draw_path(&path, &paint);
         }
 
         // 描边
-        if let Some(stroke) = &element.style.stroke_color {
+        if let Some(stroke) = &element.style.stroke {
             paint.set_style(PaintStyle::Stroke);
             paint.set_color(self.parse_color(stroke));
             paint.set_stroke_width(element.style.stroke_width.unwrap_or(1.0));
@@ -358,7 +382,7 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染图片
-    fn render_image(&mut self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
+    fn render_image(&self, canvas: &Canvas, element: &RenderElement) -> Result<()> {
         // 尝试从缓存获取图片
         let image_key = element.id.clone();
 
@@ -376,10 +400,10 @@ impl SkiaRendererV2 {
         if let Some(image) = self.image_cache.get(&image_key) {
             let src_rect = Rect::from_wh(image.width() as f32, image.height() as f32);
             let dst_rect = Rect::from_xywh(
-                element.position.x,
-                element.position.y,
-                element.size.width,
-                element.size.height,
+                element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+                element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+                element.style.width.unwrap_or(100.0),
+                element.style.height.unwrap_or(100.0),
             );
 
             let mut paint = Paint::default();
@@ -399,10 +423,10 @@ impl SkiaRendererV2 {
     /// 渲染图片占位符
     fn render_image_placeholder(&self, canvas: &Canvas, element: &RenderElement) {
         let rect = Rect::from_xywh(
-            element.position.x,
-            element.position.y,
-            element.size.width,
-            element.size.height,
+            element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
+            element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0),
+            element.style.width.unwrap_or(100.0),
+            element.style.height.unwrap_or(100.0),
         );
 
         let mut paint = Paint::default();
@@ -503,7 +527,7 @@ impl SkiaRendererV2 {
     }
 
     /// 渲染水印
-    fn render_watermark(&self, canvas: &Canvas, watermark: &str) {
+    fn render_watermark_internal(&self, canvas: &Canvas, watermark: &str) {
         canvas.save();
 
         // 旋转水印
@@ -591,22 +615,22 @@ impl SkiaRendererV2 {
         decoration: &str,
     ) {
         let metrics = font.metrics();
-        let y_base = element.position.y;
+        let y_base = element.transform.translate.as_ref().map(|p| p.y).unwrap_or(0.0);
 
         match decoration {
             "underline" => {
                 let y = y_base + metrics.1.descent;
                 canvas.draw_line(
-                    SkPoint::new(element.position.x, y),
-                    SkPoint::new(element.position.x + element.size.width, y),
+                    SkPoint::new(element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0), y),
+                    SkPoint::new(element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0) + element.style.width.unwrap_or(100.0), y),
                     paint,
                 );
             }
             "line-through" => {
                 let y = y_base - metrics.1.ascent / 2.0;
                 canvas.draw_line(
-                    SkPoint::new(element.position.x, y),
-                    SkPoint::new(element.position.x + element.size.width, y),
+                    SkPoint::new(element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0), y),
+                    SkPoint::new(element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0) + element.style.width.unwrap_or(100.0), y),
                     paint,
                 );
             }
