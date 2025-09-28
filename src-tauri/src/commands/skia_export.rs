@@ -162,11 +162,8 @@ pub struct WatermarkOptions {
 }
 
 // ===== Skia 渲染器状态管理 =====
-
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
-
-static SKIA_RENDERER: Lazy<Mutex<Option<SkiaRenderer>>> = Lazy::new(|| Mutex::new(None));
+// 注意: SkiaRenderer 包含的 Surface 和 FontMgr 不是 Send，
+// 所以我们不使用全局静态变量，而是在每次需要时创建新实例
 
 // ===== 命令实现 =====
 
@@ -176,17 +173,13 @@ pub async fn init_skia_renderer(options: SkiaInitOptions) -> Result<(), String> 
 
     log(LogLevel::Info, "SkiaExport", &format!("初始化 Skia 渲染器: {:?}", options));
 
-    // 创建默认大小的渲染器
-    let renderer = SkiaRenderer::new(1920, 1080)
+    // 只是测试创建渲染器是否成功
+    let _renderer = SkiaRenderer::new(1920, 1080)
         .map_err(|e| {
             let error_msg = format!("Failed to initialize Skia: {}", e);
             log(LogLevel::Error, "SkiaExport", &error_msg);
             error_msg
         })?;
-
-    // 存储渲染器实例
-    let mut renderer_lock = SKIA_RENDERER.lock().unwrap();
-    *renderer_lock = Some(renderer);
 
     log(LogLevel::Info, "SkiaExport", "Skia 渲染器初始化成功");
     Ok(())
@@ -195,10 +188,7 @@ pub async fn init_skia_renderer(options: SkiaInitOptions) -> Result<(), String> 
 #[command]
 pub async fn dispose_skia_renderer() -> Result<(), String> {
     println!("销毁 Skia 渲染器");
-
-    let mut renderer_lock = SKIA_RENDERER.lock().unwrap();
-    *renderer_lock = None;
-
+    // 由于我们现在是按需创建渲染器，这里不需要做任何事
     Ok(())
 }
 
@@ -225,7 +215,7 @@ pub async fn render_offscreen(
     height: u32,
     dpi: u32,
     color_space: String,
-    antialias: bool,
+    _antialias: bool,
 ) -> Result<Vec<u8>, String> {
     println!("离屏渲染: {}x{}, DPI: {}", width, height, dpi);
 
@@ -258,9 +248,9 @@ pub async fn export_image(data: ImageExportData) -> Result<Vec<u8>, String> {
     // 根据格式导出
     match data.format.as_str() {
         "png" => renderer.export_png(&render_elements),
-        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u8),
-        "webp" => renderer.export_webp(&render_elements, data.quality as u8),
-        _ => Err(format!("Unsupported image format: {}", data.format).into()),
+        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u32),
+        "webp" => renderer.export_webp(&render_elements, data.quality as u32),
+        _ => Err(anyhow::anyhow!("Unsupported image format: {}", data.format)),
     }.map_err(|e| format!("Failed to export image: {}", e))
 }
 
