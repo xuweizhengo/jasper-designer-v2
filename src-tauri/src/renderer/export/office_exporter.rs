@@ -71,7 +71,7 @@ impl OfficeExporter {
         match element.element_type {
             ElementType::Text => {
                 // 写入文本
-                if let Some(content) = &element.content {
+                if let Some(content) = element.data.get("content").and_then(|v| v.as_str()) {
                     // 创建格式
                     let mut format = Format::new();
 
@@ -82,7 +82,7 @@ impl OfficeExporter {
                         format.set_font_size(font_size);
                     }
 
-                    if let Some(font_family) = &element.style.font_family {
+                    if let Some(font_family) = element.data.get("fontFamily").and_then(|v| v.as_str()) {
                         format.set_font_name(font_family);
                     }
 
@@ -94,7 +94,7 @@ impl OfficeExporter {
                     }
 
                     // 设置对齐
-                    if let Some(align) = &element.style.text_align {
+                    if let Some(align) = element.data.get("textAlign").and_then(|v| v.as_str()) {
                         match align.as_str() {
                             "center" => format.set_align(rust_xlsxwriter::FormatAlign::Center),
                             "right" => format.set_align(rust_xlsxwriter::FormatAlign::Right),
@@ -105,7 +105,7 @@ impl OfficeExporter {
                     worksheet.write_string_with_format(row, col, content, &format)?;
                 }
             }
-            ElementType::Rectangle => {
+            ElementType::Rect => {
                 // 矩形作为单元格背景
                 if let Some(fill_color) = &element.style.fill {
                     let mut format = Format::new();
@@ -117,7 +117,7 @@ impl OfficeExporter {
             }
             _ => {
                 // 其他类型暂时忽略或转换为文本
-                if let Some(content) = &element.content {
+                if let Some(content) = element.data.get("content").and_then(|v| v.as_str()) {
                     worksheet.write_string(row, col, content)?;
                 }
             }
@@ -167,7 +167,7 @@ impl OfficeExporter {
 
             match element.element_type {
                 ElementType::Text => {
-                    if let Some(content) = &element.content {
+                    if let Some(content) = element.data.get("content").and_then(|v| v.as_str()) {
                         html.push_str(&format!(
                             r#"<div class="element" style="left:{}px; top:{}px; font-size:{}px; color:{};">{}</div>"#,
                             element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
@@ -178,7 +178,7 @@ impl OfficeExporter {
                         ));
                     }
                 }
-                ElementType::Rectangle => {
+                ElementType::Rect => {
                     html.push_str(&format!(
                         r#"<div class="element" style="left:{}px; top:{}px; width:{}px; height:{}px; background-color:{}; border: 1px solid {};"></div>"#,
                         element.transform.translate.as_ref().map(|p| p.x).unwrap_or(0.0),
@@ -186,11 +186,11 @@ impl OfficeExporter {
                         element.style.width.unwrap_or(100.0),
                         element.style.height.unwrap_or(100.0),
                         element.style.fill.as_deref().unwrap_or("transparent"),
-                        element.style.stroke_color.as_deref().unwrap_or("transparent")
+                        element.style.stroke.as_deref().unwrap_or("transparent")
                     ));
                 }
                 ElementType::Image => {
-                    if let Some(src) = element.custom_properties.get("src") {
+                    if let Some(src) = element.data.as_object().unwrap_or(&serde_json::Map::new()).get("src") {
                         if let Some(src_str) = src.as_str() {
                             html.push_str(&format!(
                                 r#"<img class="element" src="{}" style="left:{}px; top:{}px; width:{}px; height:{}px;" />"#,

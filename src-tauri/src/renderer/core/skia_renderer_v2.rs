@@ -126,14 +126,15 @@ impl SkiaRendererV2 {
         // 根据类型渲染
         match element.element_type {
             ElementType::Text => self.render_text(canvas, element)?,
-            ElementType::Rectangle => self.render_rectangle(canvas, element)?,
-            ElementType::Ellipse => self.render_ellipse(canvas, element)?,
-            ElementType::Line => self.render_line(canvas, element)?,
+            ElementType::Rect => self.render_rectangle(canvas, element)?,
+            ElementType::Circle => self.render_ellipse(canvas, element)?,
+            ElementType::Path => self.render_line(canvas, element)?,
             ElementType::Path => self.render_path(canvas, element)?,
             ElementType::Image => self.render_image(canvas, element)?,
             ElementType::Group => {
-                for child in &element.children {
-                    if child.visible {
+                if let Some(children) = &element.children {
+                    for child in children {
+                        if child.visible {
                         self.render_element_internal(canvas, child)?;
                     }
                 }
@@ -341,7 +342,7 @@ impl SkiaRendererV2 {
         paint.set_stroke_width(element.style.stroke_width.unwrap_or(1.0));
 
         // 设置线条端点样式
-        if let Some(cap) = &element.style.stroke_line_cap {
+        if let Some(cap) = element.data.get("strokeLineCap").and_then(|v| v.as_str()) {
             paint.set_stroke_cap(self.parse_stroke_cap(cap));
         }
 
@@ -354,7 +355,7 @@ impl SkiaRendererV2 {
         let mut path = Path::new();
 
         // 解析路径数据（SVG 路径格式）
-        if let Some(path_data) = element.custom_properties.get("pathData") {
+        if let Some(path_data) = element.data.as_object().unwrap_or(&serde_json::Map::new()).get("pathData") {
             if let Some(path_str) = path_data.as_str() {
                 self.parse_svg_path(&mut path, path_str);
             }
@@ -388,7 +389,7 @@ impl SkiaRendererV2 {
 
         if !self.image_cache.contains_key(&image_key) {
             // 尝试加载图片
-            if let Some(src) = element.custom_properties.get("src") {
+            if let Some(src) = element.data.as_object().unwrap_or(&serde_json::Map::new()).get("src") {
                 if let Some(src_str) = src.as_str() {
                     if let Some(image) = self.load_image(src_str)? {
                         self.image_cache.insert(image_key.clone(), image);

@@ -56,7 +56,7 @@ pub struct ElementTransform {
     pub origin: Option<Point>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Point {
     pub x: f32,
@@ -344,17 +344,17 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
             id: el.id,
             element_type: match el.r#type.as_str() {
                 "text" => ElementType::Text,
-                "rect" => ElementType::Rect,
-                "circle" => ElementType::Circle,
-                "path" => ElementType::Path,
+                "rect" | "rectangle" => ElementType::Rect,
+                "circle" | "ellipse" => ElementType::Circle,
+                "path" | "line" => ElementType::Path,
                 "image" => ElementType::Image,
                 _ => ElementType::Group,
             },
             transform: Transform {
                 translate: Some(Point { x: el.bounds.x, y: el.bounds.y }),
                 scale: el.transform.as_ref().and_then(|t| t.scale.clone()).map(|s| Point { x: s.x, y: s.y }),
-                rotate: el.transform.as_ref().and_then(|t| t.rotation),
-                origin: None,
+                rotate: el.transform.as_ref().and_then(|t| t.rotate),
+                origin: el.transform.as_ref().and_then(|t| t.origin.clone()).map(|o| Point { x: o.x, y: o.y }),
             },
             style: ElementStyle {
                 width: Some(el.bounds.width),
@@ -363,7 +363,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                 stroke: el.style.stroke_color.clone(),
                 stroke_width: el.style.stroke_width,
                 opacity: Some(el.opacity),
-                blur: el.style.blur,
+                blur: None,  // skia_export::ElementStyle 没有blur字段
                 shadow: el.style.shadow.as_ref().map(|s| Shadow {
                     offset_x: s.offset_x,
                     offset_y: s.offset_y,
@@ -371,16 +371,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                     color: s.color.clone(),
                 }),
                 clip_path: None,
-                blend_mode: el.style.blend_mode.as_ref().and_then(|mode| {
-                    match mode.as_str() {
-                        "multiply" => Some(BlendMode::Multiply),
-                        "screen" => Some(BlendMode::Screen),
-                        "overlay" => Some(BlendMode::Overlay),
-                        "darken" => Some(BlendMode::Darken),
-                        "lighten" => Some(BlendMode::Lighten),
-                        _ => Some(BlendMode::Normal),
-                    }
-                }),
+                blend_mode: None,  // skia_export::ElementStyle 没有blend_mode字段
             },
             data: el.data,
             visible: el.visible,
