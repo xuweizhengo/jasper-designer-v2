@@ -135,7 +135,8 @@ impl SkiaRendererV2 {
                 if let Some(children) = &element.children {
                     for child in children {
                         if child.visible {
-                        self.render_element_internal(canvas, child)?;
+                            self.render_element_internal(canvas, child)?;
+                        }
                     }
                 }
             }
