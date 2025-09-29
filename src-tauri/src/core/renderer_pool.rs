@@ -212,8 +212,9 @@ where
                 let original_len = renderers.len();
 
                 // 保留未过期的渲染器，但至少保留min_size个
+                let len = renderers.len();
                 renderers.retain(|pooled| {
-                    if renderers.len() > min_size {
+                    if len > min_size {
                         !pooled.is_expired(idle_timeout)
                     } else {
                         true
@@ -276,12 +277,10 @@ where
     F::Renderer: 'static
 {
     fn drop(&mut self) {
-        if let Some(renderer) = self.renderer.take() {
-            let pool = self.pool;
-            tokio::spawn(async move {
-                pool.checkin(renderer).await;
-            });
-        }
+        // 注意：不能在Drop中spawn异步任务来访问借用的pool
+        // 这会导致生命周期问题
+        // 简单地丢弃renderer，让它自然销毁
+        let _ = self.renderer.take();
     }
 }
 

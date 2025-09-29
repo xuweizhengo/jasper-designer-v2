@@ -766,7 +766,7 @@ impl SkiaRendererV2 {
         self.render(elements)?;
 
         let image = self.surface.image_snapshot();
-        let data = image.encode_to_data_with_quality(EncodedImageFormat::JPEG, quality as i32)
+        let data = image.encode_to_data_with_quality(EncodedImageFormat::JPEG, quality as u32)
             .ok_or_else(|| anyhow!("Failed to encode JPEG"))?;
 
         Ok(data.as_bytes().to_vec())
@@ -777,7 +777,7 @@ impl SkiaRendererV2 {
         self.render(elements)?;
 
         let image = self.surface.image_snapshot();
-        let data = image.encode_to_data_with_quality(EncodedImageFormat::WEBP, quality as i32)
+        let data = image.encode_to_data_with_quality(EncodedImageFormat::WEBP, quality as u32)
             .ok_or_else(|| anyhow!("Failed to encode WebP"))?;
 
         Ok(data.as_bytes().to_vec())
@@ -789,17 +789,20 @@ impl SkiaRendererV2 {
 
         let mut pdf_bytes = Vec::new();
         {
-            let mut document = pdf::new_document(&mut pdf_bytes);
+            let mut document = pdf::new_document(&mut pdf_bytes, None);
 
             // 创建页面
-            if let Some(mut canvas) = document.begin_page((self.width as f32, self.height as f32), None) {
+            // 创建页面
+            let page_size = (self.width as f32, self.height as f32);
+            document.begin_page(page_size, None);
+            if let Some(mut canvas) = document.page_canvas() {
                 // 渲染元素到 PDF canvas
                 for element in elements {
                     if element.visible {
                         let _ = Self::render_element_static(&mut canvas, element, &self.font_mgr, &self.image_cache);
                     }
                 }
-                // end_page is called automatically when canvas goes out of scope
+                document.end_page();
             }
 
             document.close();
@@ -826,9 +829,8 @@ impl SkiaRendererV2 {
             }
 
             // Get SVG data
-            if let Some(data) = canvas.end() {
-                svg_bytes = data.as_bytes().to_vec();
-            }
+            let data = canvas.end();
+            svg_bytes = data.as_bytes().to_vec();
         }
 
         // 转换为字符串

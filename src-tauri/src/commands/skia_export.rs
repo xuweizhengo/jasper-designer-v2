@@ -373,7 +373,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                 clip_path: None,
                 blend_mode: None,  // skia_export::ElementStyle 没有blend_mode字段
             },
-            data: serde_json::Value::Object(el.data),
+            data: serde_json::Value::Object(el.data.into_iter().collect()),
             visible: el.visible,
             locked: false,
             children: None,
