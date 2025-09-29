@@ -79,27 +79,27 @@ impl OfficeExporter {
                     // Extract font size from data if it's a text element
                     let font_size = element.data.get("fontSize").and_then(|v| v.as_f64()).map(|f| f as f32);
                     if let Some(font_size) = font_size {
-                        format.set_font_size(font_size);
+                        format = format.set_font_size(font_size).clone();
                     }
 
                     if let Some(font_family) = element.data.get("fontFamily").and_then(|v| v.as_str()) {
-                        format.set_font_name(font_family);
+                        format = format.set_font_name(font_family).clone();
                     }
 
                     // 设置颜色
                     if let Some(color) = &element.style.fill {
                         if let Some(xlsx_color) = Self::parse_color_to_xlsx(color) {
-                            format.set_font_color(xlsx_color);
+                            format = format.set_font_color(xlsx_color).clone();
                         }
                     }
 
                     // 设置对齐
                     if let Some(align) = element.data.get("textAlign").and_then(|v| v.as_str()) {
-                        match align {
+                        format = match align {
                             "center" => format.set_align(rust_xlsxwriter::FormatAlign::Center),
                             "right" => format.set_align(rust_xlsxwriter::FormatAlign::Right),
                             _ => format.set_align(rust_xlsxwriter::FormatAlign::Left),
-                        };
+                        }.clone();
                     }
 
                     worksheet.write_string_with_format(row, col, content, &format)?;
@@ -110,7 +110,7 @@ impl OfficeExporter {
                 if let Some(fill_color) = &element.style.fill {
                     let mut format = Format::new();
                     if let Some(xlsx_color) = Self::parse_color_to_xlsx(fill_color) {
-                        format.set_background_color(xlsx_color);
+                        format = format.set_background_color(xlsx_color).clone();
                     }
                     worksheet.write_blank(row, col, &format)?;
                 }

@@ -799,8 +799,7 @@ impl SkiaRendererV2 {
                         let _ = Self::render_element_static(&mut canvas, element, &self.font_mgr, &self.image_cache);
                     }
                 }
-
-                document.end_page();
+                // end_page is called automatically when canvas goes out of scope
             }
 
             document.close();
@@ -817,13 +816,18 @@ impl SkiaRendererV2 {
         let mut svg_bytes = Vec::new();
 
         {
-            let mut canvas = svg::Canvas::new(bounds, Some(&mut svg_bytes));
+            let mut canvas = svg::Canvas::new(bounds, None);
 
             // 渲染元素到 SVG canvas
             for element in elements {
                 if element.visible {
                     let _ = Self::render_element_static(&mut canvas, element, &self.font_mgr, &self.image_cache);
                 }
+            }
+
+            // Get SVG data
+            if let Some(data) = canvas.end() {
+                svg_bytes = data.as_bytes().to_vec();
             }
         }
 

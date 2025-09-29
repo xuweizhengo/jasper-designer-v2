@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 // ===== 数据结构 =====
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkiaRenderElement {
     pub id: String,
@@ -19,7 +19,7 @@ pub struct SkiaRenderElement {
     pub transform: Option<ElementTransform>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElementBounds {
     pub x: f32,
@@ -28,7 +28,7 @@ pub struct ElementBounds {
     pub height: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElementStyle {
     pub fill_color: Option<String>,
@@ -38,7 +38,7 @@ pub struct ElementStyle {
     pub shadow: Option<ShadowStyle>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShadowStyle {
     pub offset_x: f32,
@@ -47,7 +47,7 @@ pub struct ShadowStyle {
     pub color: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElementTransform {
     pub translate: Option<Point>,
@@ -373,7 +373,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                 clip_path: None,
                 blend_mode: None,  // skia_export::ElementStyle 没有blend_mode字段
             },
-            data: el.data.into(),
+            data: el.data,
             visible: el.visible,
             locked: false,
             children: None,
