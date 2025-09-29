@@ -103,8 +103,8 @@ pub enum AdapterError {
     #[error("Invalid value for field {field}: {value}")]
     InvalidFieldValue { field: String, value: String },
 
-    #[error("Incompatible versions: source {source}, target {target}")]
-    IncompatibleVersions { source: String, target: String },
+    #[error("Incompatible versions: source {source_version}, target {target_version}")]
+    IncompatibleVersions { source_version: String, target_version: String },
 
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),

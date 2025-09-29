@@ -11,7 +11,7 @@ impl OfficeExporter {
     /// 导出为 Excel (.xlsx)
     pub fn export_excel(elements: &[RenderElement]) -> Result<Vec<u8>> {
         let mut workbook = Workbook::new();
-        let worksheet = workbook.add_worksheet();
+        let mut worksheet = workbook.add_worksheet();
 
         // 设置默认列宽
         worksheet.set_column_width(0, 20)?;
@@ -47,7 +47,7 @@ impl OfficeExporter {
 
                 for (col_idx, element) in sorted_elements.iter().enumerate() {
                     Self::write_element_to_excel(
-                        &worksheet,
+                        &mut worksheet,
                         element,
                         row_idx as u32,
                         col_idx as u16,
@@ -63,7 +63,7 @@ impl OfficeExporter {
 
     /// 写入单个元素到 Excel
     fn write_element_to_excel(
-        worksheet: &Worksheet,
+        worksheet: &mut Worksheet,
         element: &RenderElement,
         row: u32,
         col: u16,

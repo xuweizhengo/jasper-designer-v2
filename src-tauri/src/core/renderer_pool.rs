@@ -144,7 +144,7 @@ where
         // 获取许可
         let permit = match timeout(
             Duration::from_secs(self.config.checkout_timeout_seconds),
-            self.semaphore.acquire()
+            self.semaphore.clone().acquire_owned()
         ).await {
             Ok(Ok(permit)) => permit,
             Ok(Err(_)) => return Err(PoolError::PoolEmpty),
@@ -247,13 +247,19 @@ where
 }
 
 /// 渲染器守卫，用于自动归还
-pub struct RendererGuard<'a, F: RendererFactory> {
+pub struct RendererGuard<'a, F: RendererFactory + 'static>
+where
+    F::Renderer: 'static
+{
     renderer: Option<F::Renderer>,
     pool: &'a RendererPool<F>,
     _permit: tokio::sync::OwnedSemaphorePermit,
 }
 
-impl<'a, F: RendererFactory> RendererGuard<'a, F> {
+impl<'a, F: RendererFactory + 'static> RendererGuard<'a, F>
+where
+    F::Renderer: 'static
+{
     /// 获取渲染器引用
     pub fn get(&self) -> &F::Renderer {
         self.renderer.as_ref().expect("Renderer already taken")
@@ -265,7 +271,10 @@ impl<'a, F: RendererFactory> RendererGuard<'a, F> {
     }
 }
 
-impl<'a, F: RendererFactory> Drop for RendererGuard<'a, F> {
+impl<'a, F: RendererFactory + 'static> Drop for RendererGuard<'a, F>
+where
+    F::Renderer: 'static
+{
     fn drop(&mut self) {
         if let Some(renderer) = self.renderer.take() {
             let pool = self.pool;
@@ -276,7 +285,10 @@ impl<'a, F: RendererFactory> Drop for RendererGuard<'a, F> {
     }
 }
 
-impl<'a, F: RendererFactory> std::ops::Deref for RendererGuard<'a, F> {
+impl<'a, F: RendererFactory + 'static> std::ops::Deref for RendererGuard<'a, F>
+where
+    F::Renderer: 'static
+{
     type Target = F::Renderer;
 
     fn deref(&self) -> &Self::Target {
@@ -284,7 +296,10 @@ impl<'a, F: RendererFactory> std::ops::Deref for RendererGuard<'a, F> {
     }
 }
 
-impl<'a, F: RendererFactory> std::ops::DerefMut for RendererGuard<'a, F> {
+impl<'a, F: RendererFactory + 'static> std::ops::DerefMut for RendererGuard<'a, F>
+where
+    F::Renderer: 'static
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.get_mut()
     }

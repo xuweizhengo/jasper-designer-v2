@@ -248,8 +248,8 @@ pub async fn export_image(data: ImageExportData) -> Result<Vec<u8>, String> {
     // 根据格式导出
     match data.format.as_str() {
         "png" => renderer.export_png(&render_elements),
-        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u8),
-        "webp" => renderer.export_webp(&render_elements, data.quality as u8),
+        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u32),
+        "webp" => renderer.export_webp(&render_elements, data.quality as u32),
         _ => Err(anyhow::anyhow!("Unsupported image format: {}", data.format)),
     }.map_err(|e| format!("Failed to export image: {}", e))
 }
@@ -373,7 +373,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                 clip_path: None,
                 blend_mode: None,  // skia_export::ElementStyle 没有blend_mode字段
             },
-            data: el.data,
+            data: serde_json::Value::Object(el.data),
             visible: el.visible,
             locked: false,
             children: None,
