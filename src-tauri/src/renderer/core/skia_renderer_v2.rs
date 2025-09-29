@@ -792,17 +792,15 @@ impl SkiaRendererV2 {
             let mut document = pdf::new_document(&mut pdf_bytes, None);
 
             // 创建页面
-            // 创建页面
             let page_size = (self.width as f32, self.height as f32);
-            document.begin_page(page_size, None);
-            if let Some(mut canvas) = document.page_canvas() {
+            if let Some(mut canvas) = document.begin_page(page_size, None) {
                 // 渲染元素到 PDF canvas
                 for element in elements {
                     if element.visible {
                         let _ = Self::render_element_static(&mut canvas, element, &self.font_mgr, &self.image_cache);
                     }
                 }
-                document.end_page();
+                // Canvas will be dropped here, automatically ending the page
             }
 
             document.close();
