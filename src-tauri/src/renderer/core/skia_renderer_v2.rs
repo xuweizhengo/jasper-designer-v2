@@ -793,16 +793,21 @@ impl SkiaRendererV2 {
 
             // 创建页面
             let page_size = (self.width as f32, self.height as f32);
-            if let Some(mut canvas) = document.begin_page(page_size, None) {
+            // begin_page 返回 Document 本身，不是 Option
+            let mut document = document.begin_page(page_size, None);
+
+            // 获取 canvas
+            if let Some(canvas) = document.canvas() {
                 // 渲染元素到 PDF canvas
                 for element in elements {
                     if element.visible {
-                        let _ = Self::render_element_static(&mut canvas, element, &self.font_mgr, &self.image_cache);
+                        let _ = Self::render_element_static(canvas, element, &self.font_mgr, &self.image_cache);
                     }
                 }
-                // Canvas will be dropped here, automatically ending the page
             }
 
+            // 结束页面
+            document = document.end_page();
             document.close();
         }
 
