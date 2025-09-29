@@ -64,7 +64,10 @@ impl<R: Renderer> PooledRenderer<R> {
 }
 
 /// 渲染器池
-pub struct RendererPool<F: RendererFactory> {
+pub struct RendererPool<F: RendererFactory + 'static>
+where
+    F::Renderer: 'static
+{
     factory: Arc<F>,
     config: PoolConfig,
     renderers: Arc<Mutex<Vec<PooledRenderer<F::Renderer>>>>,
@@ -72,7 +75,10 @@ pub struct RendererPool<F: RendererFactory> {
     shutdown: Arc<Mutex<bool>>,
 }
 
-impl<F: RendererFactory> RendererPool<F> {
+impl<F: RendererFactory + 'static> RendererPool<F>
+where
+    F::Renderer: 'static
+{
     /// 创建新的渲染器池
     pub async fn new(factory: F, config: PoolConfig) -> PoolResult<Self> {
         let pool = Self {

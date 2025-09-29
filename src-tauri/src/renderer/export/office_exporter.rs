@@ -95,11 +95,11 @@ impl OfficeExporter {
 
                     // 设置对齐
                     if let Some(align) = element.data.get("textAlign").and_then(|v| v.as_str()) {
-                        match align.as_str() {
+                        match align {
                             "center" => format.set_align(rust_xlsxwriter::FormatAlign::Center),
                             "right" => format.set_align(rust_xlsxwriter::FormatAlign::Right),
                             _ => format.set_align(rust_xlsxwriter::FormatAlign::Left),
-                        }
+                        };
                     }
 
                     worksheet.write_string_with_format(row, col, content, &format)?;

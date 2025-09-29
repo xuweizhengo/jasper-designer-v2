@@ -248,8 +248,8 @@ pub async fn export_image(data: ImageExportData) -> Result<Vec<u8>, String> {
     // 根据格式导出
     match data.format.as_str() {
         "png" => renderer.export_png(&render_elements),
-        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u32),
-        "webp" => renderer.export_webp(&render_elements, data.quality as u32),
+        "jpeg" | "jpg" => renderer.export_jpg(&render_elements, data.quality as u8),
+        "webp" => renderer.export_webp(&render_elements, data.quality as u8),
         _ => Err(anyhow::anyhow!("Unsupported image format: {}", data.format)),
     }.map_err(|e| format!("Failed to export image: {}", e))
 }
@@ -267,7 +267,7 @@ pub async fn export_pdf(data: PDFExportData) -> Result<Vec<u8>, String> {
     // TODO: 实现多页 PDF 渲染
     // 目前先渲染第一页
     if let Some(first_page) = data.pages.first() {
-        let render_elements = convert_elements(first_page.clone());
+        let render_elements = convert_elements(first_page.to_vec());
         renderer.export_pdf(&render_elements)
             .map_err(|e| format!("Failed to export PDF: {}", e))
     } else {
@@ -373,7 +373,7 @@ fn convert_elements(elements: Vec<SkiaRenderElement>) -> Vec<crate::renderer::ty
                 clip_path: None,
                 blend_mode: None,  // skia_export::ElementStyle 没有blend_mode字段
             },
-            data: el.data,
+            data: el.data.into(),
             visible: el.visible,
             locked: false,
             children: None,

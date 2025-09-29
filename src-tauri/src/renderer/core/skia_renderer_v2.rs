@@ -422,7 +422,7 @@ impl SkiaRendererV2 {
             // FilterQuality is removed in newer skia-safe versions
             // paint.set_filter_quality(FilterQuality::High);
 
-            canvas.draw_image_rect(image, Some((&src_rect, SkPoint::default())), &dst_rect, &paint);
+            canvas.draw_image_rect(image, Some(&src_rect), &dst_rect, &paint);
         } else {
             // 绘制占位符
             Self::render_image_placeholder_static(canvas, element);
