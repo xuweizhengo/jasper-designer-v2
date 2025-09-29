@@ -146,7 +146,6 @@ impl SkiaRendererV2 {
             ElementType::Text => Self::render_text_static(canvas, element, font_mgr)?,
             ElementType::Rect => Self::render_rectangle_static(canvas, element)?,
             ElementType::Circle => Self::render_ellipse_static(canvas, element)?,
-            ElementType::Path => Self::render_line_static(canvas, element)?,
             ElementType::Path => Self::render_path_static(canvas, element)?,
             ElementType::Image => Self::render_image_static(canvas, element, image_cache)?,
             ElementType::Group => {
@@ -793,22 +792,22 @@ impl SkiaRendererV2 {
 
             // 创建页面
             let page_size = (self.width as f32, self.height as f32);
-            // begin_page 返回 Document 本身，不是 Option
-            let mut document = document.begin_page(page_size, None);
+            // begin_page 返回 Document 本身
+            let document = document.begin_page(page_size, None);
 
-            // 获取 canvas
-            if let Some(canvas) = document.canvas() {
-                // 渲染元素到 PDF canvas
-                for element in elements {
-                    if element.visible {
-                        let _ = Self::render_element_static(canvas, element, &self.font_mgr, &self.image_cache);
-                    }
+            // 获取 canvas - canvas() 直接返回 &Canvas，不是 Option
+            let canvas = document.canvas();
+
+            // 渲染元素到 PDF canvas
+            for element in elements {
+                if element.visible {
+                    let _ = Self::render_element_static(canvas, element, &self.font_mgr, &self.image_cache);
                 }
             }
 
-            // 结束页面
-            document = document.end_page();
-            document.close();
+            // 结束页面 - end_page 消耗 document，返回原始的 Document
+            let _ = document.end_page();
+            // close 方法不存在，Document 会在 drop 时自动关闭
         }
 
         Ok(pdf_bytes)
