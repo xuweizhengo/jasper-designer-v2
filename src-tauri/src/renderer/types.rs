@@ -71,7 +71,7 @@ pub struct RenderElement {
     pub children: Option<Vec<RenderElement>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ElementType {
     Text,

@@ -233,8 +233,11 @@ impl OfficeExporter {
                 continue;
             }
 
-            if let Some(text_content) = &element.content {
-                content.push_str(&format!("- {}\n", text_content));
+            // 从data字段提取文本内容
+            if element.element_type == ElementType::Text {
+                if let Some(text) = element.data.get("text").and_then(|v| v.as_str()) {
+                    content.push_str(&format!("- {}\n", text));
+                }
             }
         }
 
